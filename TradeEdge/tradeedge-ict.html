@@ -4590,30 +4590,26 @@ function _chipSideTex(d,count){
   _chipTexCache[key]=t;return t;
 }
 
-/* Top face — 768×768, realistic casino chip: mostly base color, thin edge stripes, clear center inlay
-   Real chips: 39mm diameter, edge spots ~3mm wide = ~8% of radius from outer edge.
-   Center inlay ~50% of face area. Most visible area is solid chip color. */
+/* Top face — 1024×1024, crisp rendering with anisotropic filtering.
+   Realistic casino chip: mostly base color, thin edge stripes, clear center inlay. */
 function _chipTopTex(d){
   if(_chipTexCache[d.label+'_top'])return _chipTexCache[d.label+'_top'];
-  var Z=768,cv=document.createElement('canvas');cv.width=Z;cv.height=Z;var ctx=cv.getContext('2d');
-  var cx=Z/2,cy=Z/2,R=Z/2-4;
-  var eW=R*0.12; // edge stripe width — thin rim zone (~12% of radius, like real chips)
-  var sR=R-eW;   // stripe inner radius — where stripes start
-  var iR=R*0.72;  // center inlay radius — ~72% of chip, ~50% of face area
+  var Z=1024,cv=document.createElement('canvas');cv.width=Z;cv.height=Z;var ctx=cv.getContext('2d');
+  var cx=Z/2,cy=Z/2,R=Z/2-6;
+  var eW=R*0.14; // edge stripe width
+  var sR=R-eW;   // stripe inner radius
+  var iR=R*0.70;  // center inlay radius
 
-  // 1. Full chip base fill — solid color with subtle radial gradient
-  var bg=ctx.createRadialGradient(cx-R*.05,cy-R*.05,0,cx,cy,R);
+  // 1. Full chip base fill
+  var bg=ctx.createRadialGradient(cx-R*.04,cy-R*.04,0,cx,cy,R);
   bg.addColorStop(0,_ac(d.r,20));bg.addColorStop(.5,d.c);bg.addColorStop(.85,d.c);bg.addColorStop(1,_ac(d.r,-15));
   ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fillStyle=bg;ctx.fill();
 
-  // 2. Edge stripes — thin arc segments at outermost rim, aligned with side texture
-  // Side texture starts at u=0 → cylinder angle 0. Top cap UV mirrors Z axis,
-  // so cylinder angle θ → canvas angle -θ. Draw stripes CW to match side CCW.
+  // 2. Edge stripes — thin arc ring segments, aligned with side texture
   var N=8,T=N*2,aP=Math.PI*2/T;
   for(var i=0;i<T;i++){
     if(i%2!==0)continue;
     var a1=-i*aP,sub=aP/3;
-    // Ring segments: outer arc CW, inner arc back — 3 colored sub-stripes
     ctx.beginPath();ctx.arc(cx,cy,R,a1,a1-sub,true);ctx.arc(cx,cy,sR,a1-sub,a1);ctx.closePath();
     ctx.fillStyle=d.s1;ctx.globalAlpha=.85;ctx.fill();
     ctx.beginPath();ctx.arc(cx,cy,R,a1-sub,a1-sub*2,true);ctx.arc(cx,cy,sR,a1-sub*2,a1-sub);ctx.closePath();
@@ -4623,55 +4619,64 @@ function _chipTopTex(d){
   }
   ctx.globalAlpha=1;
 
-  // 3. Center inlay circle — distinct lighter center with clear boundary
-  var inlayG=ctx.createRadialGradient(cx-iR*.1,cy-iR*.1,0,cx,cy,iR);
-  inlayG.addColorStop(0,_ac(d.r,30));inlayG.addColorStop(.5,_ac(d.r,10));inlayG.addColorStop(1,d.c);
+  // 3. Center inlay circle — lighter center, crisp fill
+  var inlayG=ctx.createRadialGradient(cx-iR*.08,cy-iR*.08,0,cx,cy,iR);
+  inlayG.addColorStop(0,_ac(d.r,30));inlayG.addColorStop(.5,_ac(d.r,12));inlayG.addColorStop(1,d.c);
   ctx.beginPath();ctx.arc(cx,cy,iR,0,Math.PI*2);ctx.fillStyle=inlayG;ctx.fill();
 
-  // 4. Inlay ring border — golden metallic ring
+  // 4. Inlay ring — thick, high-contrast golden border
   ctx.beginPath();ctx.arc(cx,cy,iR,0,Math.PI*2);
-  ctx.strokeStyle='rgba(200,180,120,0.6)';ctx.lineWidth=4;ctx.stroke();
-  ctx.beginPath();ctx.arc(cx,cy,iR+2,0,Math.PI*2);
-  ctx.strokeStyle='rgba(255,255,255,0.12)';ctx.lineWidth=1;ctx.stroke();
+  ctx.strokeStyle='rgba(190,170,100,0.85)';ctx.lineWidth=7;ctx.stroke();
+  // Dark inner groove for depth
+  ctx.beginPath();ctx.arc(cx,cy,iR-4,0,Math.PI*2);
+  ctx.strokeStyle='rgba(0,0,0,0.25)';ctx.lineWidth=2;ctx.stroke();
+  // Bright outer highlight
+  ctx.beginPath();ctx.arc(cx,cy,iR+4,0,Math.PI*2);
+  ctx.strokeStyle='rgba(255,255,255,0.18)';ctx.lineWidth=2;ctx.stroke();
 
-  // 5. Edge spots — 6 small rectangular marks near outer rim
+  // 5. Edge spots — 6 marks near outer rim
   var spotR=R-eW/2,spotCount=6;
   var _rr=!!ctx.roundRect;
   for(var si=0;si<spotCount;si++){
     var sa=si*(Math.PI*2/spotCount)-Math.PI/2;
     var sx=cx+Math.cos(sa)*spotR,sy=cy+Math.sin(sa)*spotR;
     ctx.save();ctx.translate(sx,sy);ctx.rotate(sa+Math.PI/2);
-    ctx.fillStyle='rgba(255,255,255,0.8)';
-    ctx.beginPath();if(_rr){ctx.roundRect(-8,-4,16,8,2);}else{ctx.rect(-8,-4,16,8);}ctx.fill();
-    ctx.fillStyle=si%2===0?d.s1:d.s2;ctx.globalAlpha=0.85;
-    ctx.beginPath();if(_rr){ctx.roundRect(-6,-3,12,6,1.5);}else{ctx.rect(-6,-3,12,6);}ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.85)';
+    ctx.beginPath();if(_rr){ctx.roundRect(-10,-5,20,10,3);}else{ctx.rect(-10,-5,20,10);}ctx.fill();
+    ctx.fillStyle=si%2===0?d.s1:d.s2;ctx.globalAlpha=0.9;
+    ctx.beginPath();if(_rr){ctx.roundRect(-7,-3,14,6,2);}else{ctx.rect(-7,-3,14,6);}ctx.fill();
     ctx.globalAlpha=1;ctx.restore();
   }
 
-  // 6. Inner decorative ring — dashed circle inside inlay
-  ctx.beginPath();ctx.arc(cx,cy,iR-14,0,Math.PI*2);
-  ctx.strokeStyle='rgba(200,180,120,0.2)';ctx.lineWidth=1;ctx.setLineDash([6,5]);ctx.stroke();ctx.setLineDash([]);
+  // 6. Inner decorative ring
+  ctx.beginPath();ctx.arc(cx,cy,iR-20,0,Math.PI*2);
+  ctx.strokeStyle='rgba(190,170,100,0.3)';ctx.lineWidth=2;ctx.setLineDash([10,7]);ctx.stroke();ctx.setLineDash([]);
 
-  // 7. Denomination text
+  // 7. Denomination text — crisp and bold
   ctx.fillStyle=d.tx;ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.font='900 '+(Z*.048)+'px "Arial Black",Arial,sans-serif';
-  ctx.globalAlpha=.15;ctx.fillText('$',cx+1,cy-Z*.032+1);
-  ctx.globalAlpha=.8;ctx.fillText('$',cx,cy-Z*.032);
-  var valSize=d.label.length>2?Z*.065:Z*.085;
+  ctx.font='900 '+(Z*.05)+'px "Arial Black",Arial,sans-serif';
+  ctx.globalAlpha=.2;ctx.fillText('$',cx+2,cy-Z*.034+2);
+  ctx.globalAlpha=.85;ctx.fillText('$',cx,cy-Z*.034);
+  var valSize=d.label.length>2?Z*.07:Z*.09;
   ctx.font='900 '+valSize+'px "Arial Black",Arial,sans-serif';
-  ctx.globalAlpha=.15;ctx.fillText(d.label,cx+1,cy+Z*.022+1);
-  ctx.globalAlpha=1;ctx.fillText(d.label,cx,cy+Z*.022);
+  ctx.globalAlpha=.2;ctx.fillText(d.label,cx+2,cy+Z*.024+2);
+  ctx.globalAlpha=1;ctx.fillText(d.label,cx,cy+Z*.024);
 
-  // 8. Clay grain noise
+  // 8. Clay grain noise (lighter to preserve detail)
   var id=ctx.getImageData(0,0,Z,Z),px=id.data;
-  for(var i=0;i<px.length;i+=4){var pi=(i/4)%Z,pj=Math.floor(i/4/Z),dx=pi-cx,dy=pj-cy;if(dx*dx+dy*dy<R*R){var n=(Math.random()-.5)*5;px[i]+=n;px[i+1]+=n;px[i+2]+=n;}}
+  for(var i=0;i<px.length;i+=4){var pi=(i/4)%Z,pj=Math.floor(i/4/Z),dx=pi-cx,dy=pj-cy;if(dx*dx+dy*dy<R*R){var n=(Math.random()-.5)*4;px[i]+=n;px[i+1]+=n;px[i+2]+=n;}}
   ctx.putImageData(id,0,0);
 
   // 9. Specular highlight
-  ctx.globalAlpha=.05;ctx.beginPath();ctx.ellipse(cx-Z*.06,cy-Z*.1,R*.35,R*.18,-.2,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();ctx.globalAlpha=1;
+  ctx.globalAlpha=.05;ctx.beginPath();ctx.ellipse(cx-Z*.06,cy-Z*.1,R*.3,R*.15,-.2,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();ctx.globalAlpha=1;
 
-  _chipTexCache[d.label+'_top']=new THREE.CanvasTexture(cv);
-  return _chipTexCache[d.label+'_top'];
+  // Crisp texture — anisotropic filtering, no blurry mipmaps
+  var tex=new THREE.CanvasTexture(cv);
+  tex.anisotropy=_3d.renderer?_3d.renderer.capabilities.getMaxAnisotropy():4;
+  tex.minFilter=THREE.LinearFilter; // no mipmapping — keeps edges sharp
+  tex.magFilter=THREE.LinearFilter;
+  _chipTexCache[d.label+'_top']=tex;
+  return tex;
 }
 
 /* Bottom face — dark underside with subtle ring detail */
