@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/slickrick/Downloads/**)",
+      "WebSearch(*)",
+      "WebFetch(*)"
+    ],
+    "defaultMode": "bypassPermissions"
+  },
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  }
+}

@@ -1,0 +1,14 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code local config
+.claude/settings.local.json
+
+# Sensitive data / personal trade files
+TradeEdge/data/
+
+# Node (future use)
+node_modules/
+.env
+.env.*
