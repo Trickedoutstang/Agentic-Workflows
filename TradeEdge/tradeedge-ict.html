@@ -1567,7 +1567,7 @@ function renderDash(){
   drawEquity();drawDonut();drawDOW();drawKZChart();renderCalendar();
   }catch(err){
     console.error('[TradeEdge] Dashboard render error:',err);
-    document.getElementById('mgrid').innerHTML=`<div style="color:var(--red);padding:20px;font-family:var(--mono);font-size:.8rem">Dashboard error: ${err.message}<br>Trades in memory: ${S.trades.length}</div>`;
+    document.getElementById('mgrid').innerHTML=`<div style="color:var(--red);padding:20px;font-family:var(--mono);font-size:.8rem">Dashboard error: ${escapeHtml(err.message)}<br>Trades in memory: ${S.trades.length}</div>`;
   }
 }
 
@@ -1880,7 +1880,7 @@ function renderTrades(){
     return `<tr onclick="editTrade(${idx})">
       <td class="mono">${t.date||'—'}</td>
       <td class="mono" style="color:var(--t3)">${t.time||'—'}</td>
-      <td class="sym">${t.symbol||'—'}</td>
+      <td class="sym">${escapeHtml(t.symbol)||'—'}</td>
       <td><span class="bdg ${isLong?'bdg-long':'bdg-short'}">${isLong?'LONG':'SHORT'}</span></td>
       <td class="mono">${t.qty||1}</td>
       <td class="mono">${t.entry||'—'}</td>
@@ -1891,10 +1891,10 @@ function renderTrades(){
       <td class="mono" style="color:var(--t3)">${t.fees?f$(-t.fees):'—'}</td>
       <td class="mono" style="color:${pnl>=0?'var(--green)':'var(--red)'};font-weight:600">${f$(pnl)}</td>
       <td class="mono">${t.rr?fnum(t.rr)+'R':'—'}</td>
-      <td class="mono" style="font-size:.68rem;color:${t.exitReason==='TP Hit'?'var(--green)':t.exitReason==='SL Hit'?'var(--red)':'var(--t3)'}">${t.exitReason||'—'}</td>
+      <td class="mono" style="font-size:.68rem;color:${t.exitReason==='TP Hit'?'var(--green)':t.exitReason==='SL Hit'?'var(--red)':'var(--t3)'}">${escapeHtml(t.exitReason)||'—'}</td>
       <td>${tags||'<span style="color:var(--t3)">—</span>'}</td>
-      <td><span class="tag kz-tag" style="display:${t.killzone?'inline-flex':'none'}">${t.killzone||''}</span></td>
-      <td style="font-size:.85rem">${t.emotion||'—'}</td>
+      <td><span class="tag kz-tag" style="display:${t.killzone?'inline-flex':'none'}">${escapeHtml(t.killzone)}</span></td>
+      <td style="font-size:.85rem">${escapeHtml(t.emotion)||'—'}</td>
       <td style="color:var(--gold)">${'★'.repeat(t.rating||0)}</td>
       <td><span class="bdg ${pnl>=0?'bdg-win':'bdg-loss'}">${pnl>=0?'WIN':'LOSS'}</span></td>
       <td>${t.chartImg?`<a href="${escapeHtml(t.chartImg)}" target="_blank" onclick="event.stopPropagation()" title="View screenshot" style="color:var(--accent);font-size:.85rem;text-decoration:none">📷</a>`:t.chartUrl?`<a href="${escapeHtml(t.chartUrl)}" target="_blank" onclick="event.stopPropagation()" title="View chart" style="color:var(--accent2);font-size:.85rem;text-decoration:none">📊</a>`:'<span style="color:var(--t3);font-size:.75rem">—</span>'}</td>
@@ -2337,7 +2337,7 @@ function renderAnalytics(){
   const maxSymPnl=Math.max(...Object.values(syms).map(v=>Math.abs(v.pnl)))||1;
   document.getElementById('sym-stats').innerHTML=Object.entries(syms).sort((a,b)=>b[1].pnl-a[1].pnl).map(([s,v])=>`
     <div class="stat-row">
-      <span class="stat-k">${s} <span style="color:var(--t3)">(${v.cnt})</span></span>
+      <span class="stat-k">${escapeHtml(s)} <span style="color:var(--t3)">(${v.cnt})</span></span>
       <span class="stat-v" style="color:${v.pnl>=0?'var(--green)':'var(--red)'}">${f$(v.pnl)}</span>
     </div>
     <div class="prog"><div class="prog-fill" style="width:${Math.min(100,Math.abs(v.pnl/maxSymPnl)*100)}%;background:${v.pnl>=0?'var(--green)':'var(--red)'}"></div></div>
@@ -2366,7 +2366,7 @@ function renderAnalytics(){
   const maxMk=Math.max(...Object.values(mkCounts))||1;
   document.getElementById('mistake-stats').innerHTML=Object.entries(mkCounts).sort((a,b)=>b[1]-a[1]).map(([mk,cnt])=>`
     <div class="stat-row">
-      <span class="stat-k">${mk}</span>
+      <span class="stat-k">${escapeHtml(mk)}</span>
       <span class="stat-v" style="color:var(--red)">${cnt}x</span>
     </div>
     <div class="prog"><div class="prog-fill" style="width:${(cnt/maxMk)*100}%;background:var(--red);opacity:.7"></div></div>
@@ -2451,7 +2451,7 @@ function renderICT(){
     Object.entries(setups).sort((a,b)=>b[1].pnl-a[1].pnl).map(([s,v])=>`
       <div style="margin-bottom:8px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
-          <span style="font-family:var(--mono);font-size:.72rem;color:var(--gold)">${s}</span>
+          <span style="font-family:var(--mono);font-size:.72rem;color:var(--gold)">${escapeHtml(s)}</span>
           <span style="font-family:var(--mono);font-size:.7rem">
             <span style="color:${v.pnl>=0?'var(--green)':'var(--red)'}">${f$(v.pnl)}</span>
             <span style="color:var(--t3);margin-left:8px">${fpct(v.wins/v.total)} WR · ${v.total}T</span>
@@ -2471,7 +2471,7 @@ function renderICT(){
   });
   document.getElementById('kz-perf').innerHTML=Object.entries(kzPerf).sort((a,b)=>b[1].pnl-a[1].pnl).map(([kz,v])=>`
     <div class="stat-row">
-      <span class="stat-k" style="color:var(--accent2)">${kz}</span>
+      <span class="stat-k" style="color:var(--accent2)">${escapeHtml(kz)}</span>
       <span class="stat-v">
         <span style="color:${v.pnl>=0?'var(--green)':'var(--red)'}">${f$(v.pnl)}</span>
         <span style="color:var(--t3);font-size:.65rem;margin-left:6px">${fpct(v.wins/v.total)} WR</span>
@@ -3002,9 +3002,9 @@ function showPreview(rows){
   if(!rows.length)return;
   document.getElementById('import-preview').style.display='block';
   const k=Object.keys(rows[0]);
-  document.getElementById('prev-head').innerHTML='<th>#</th>'+k.map(h=>`<th>${h}</th>`).join('');
+  document.getElementById('prev-head').innerHTML='<th>#</th>'+k.map(h=>`<th>${escapeHtml(h)}</th>`).join('');
   document.getElementById('prev-body').innerHTML=rows.slice(0,8).map((r,i)=>
-    `<tr><td class="mono" style="color:var(--t3)">${i+1}</td>${k.map(h=>`<td>${r[h]||''}</td>`).join('')}</tr>`
+    `<tr><td class="mono" style="color:var(--t3)">${i+1}</td>${k.map(h=>`<td>${escapeHtml(r[h]||'')}</td>`).join('')}</tr>`
   ).join('');
 }
 
@@ -3038,7 +3038,7 @@ function showTradePreview(trades){
         <tbody>${trades.slice(0,10).map(t=>`<tr>
           <td class="mono">${t.date||'—'}</td>
           <td class="mono" style="color:var(--t3)">${t.time||'—'}</td>
-          <td class="sym">${t.symbol||'—'}</td>
+          <td class="sym">${escapeHtml(t.symbol)||'—'}</td>
           <td><span class="bdg ${t.side==='Long'?'bdg-long':'bdg-short'}">${t.side}</span></td>
           <td class="mono">${t.qty}</td>
           <td class="mono">${t.entry||'—'}</td>
@@ -3413,7 +3413,7 @@ function renderAMPStatements(){
       <th>Date</th><th>File</th><th>P&L</th><th>Fees</th><th>Balance</th><th>Trades</th>
     </tr></thead><tbody>${stmts.map(s=>`<tr>
       <td class="mono">${s.tradeDate||'—'}</td>
-      <td style="font-size:.7rem;max-width:120px;overflow:hidden;text-overflow:ellipsis" title="${s.fileName}">${s.fileName}</td>
+      <td style="font-size:.7rem;max-width:120px;overflow:hidden;text-overflow:ellipsis" title="${escapeHtml(s.fileName)}">${escapeHtml(s.fileName)}</td>
       <td class="mono" style="color:${s.realizedPnl>=0?'var(--green)':'var(--red)'}">${f$(s.realizedPnl)}</td>
       <td class="mono" style="color:var(--gold)">${f$(-s.fees.total)}</td>
       <td class="mono">${s.balance?f$(s.balance,false):'—'}</td>
@@ -3456,7 +3456,7 @@ function renderImportLog(){
       return`<tr>
         <td class="mono" style="font-size:.7rem">${ds}</td>
         <td><span class="bdg ${l.type==='AMP PDF'?'bdg-neutral':'bdg-long'}" style="font-size:.58rem">${l.type}</span></td>
-        <td style="font-size:.72rem;max-width:160px;overflow:hidden;text-overflow:ellipsis" title="${l.fileName}">${l.fileName||'—'}</td>
+        <td style="font-size:.72rem;max-width:160px;overflow:hidden;text-overflow:ellipsis" title="${escapeHtml(l.fileName)}">${escapeHtml(l.fileName)||'—'}</td>
         <td style="font-size:.7rem">${det}</td>
       </tr>`;}).join('')}
     </tbody></table></div>`;
@@ -3574,7 +3574,7 @@ function processRouted(routed,routeLog){
     listEl.innerHTML=routeLog.map(r=>
       `<div style="padding:4px 0;display:flex;align-items:center;gap:8px">
         <span>${r.icon}</span>
-        <span style="color:var(--t2);flex:1;overflow:hidden;text-overflow:ellipsis">${r.name}</span>
+        <span style="color:var(--t2);flex:1;overflow:hidden;text-overflow:ellipsis">${escapeHtml(r.name)}</span>
         <span style="color:${r.color};font-size:.65rem;white-space:nowrap">${r.type}</span>
       </div>`).join('');
   }
