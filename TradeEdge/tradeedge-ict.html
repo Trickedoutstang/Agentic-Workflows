@@ -3809,7 +3809,21 @@ renderTagSuggestions();
 renderDash();
 updateSidebar();
 // Deferred 3D chip init — ensure layout is settled after splash
-setTimeout(function(){_lastChipBalance=-1;updateSidebar();},2800);
+setTimeout(function(){
+  _lastChipBalance=-1;updateSidebar();
+  // Demo mode: if no trades and no starting balance, show demo chips ($97.20 = real account NLV)
+  if((!S.trades||!S.trades.length)&&!S.startingBalance){
+    setTimeout(function(){
+      if(typeof _3d!=='undefined'&&_3d.inited&&_3d.allChips.length===0){
+        _userHasInteracted=true;
+        renderChips(97.20);
+        var countEl=document.getElementById('chip-tray-count');
+        if(countEl)countEl.textContent='DEMO · $97.20';
+        console.log('[TradeEdge] Demo mode — showing $97.20 chips');
+      }
+    },800);
+  }
+},2800);
 
 
 
