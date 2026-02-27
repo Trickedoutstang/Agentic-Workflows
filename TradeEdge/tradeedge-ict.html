@@ -700,6 +700,7 @@ kbd{background:var(--s3);border:1px solid var(--b3);border-radius:4px;padding:2p
         <div class="chip-tray-hud">
           <div class="chip-tray-label">Chip Stack</div>
           <div class="chip-tray-count" id="chip-tray-count"></div>
+          <button id="chip-test-btn" onclick="window.testChips(50000)" style="pointer-events:auto;position:absolute;top:4px;right:4px;background:rgba(255,255,255,.15);color:#0f8;border:1px solid rgba(0,240,192,.4);border-radius:4px;padding:3px 10px;font-size:.6rem;font-family:var(--mono);cursor:pointer;z-index:10;letter-spacing:1px">TEST $50K</button>
         </div>
         <canvas id="chip-canvas" style="display:none"></canvas>
         <div id="chip-css-fallback" style="display:none"></div>
@@ -4460,11 +4461,13 @@ function init3DChips(){
     _mouse.x=((e.clientX-rect.left)/rect.width)*2-1;
     _mouse.y=-((e.clientY-rect.top)/rect.height)*2+1;
     _ray.setFromCamera(_mouse,_3d.camera);
-    var hits=_ray.intersectObjects(_3d.chipGroup.children);
+    var hits=_ray.intersectObjects(_3d.chipGroup.children,true);
     if(hits.length>0){
-      var hit=hits[0].object;
+      // Traverse up to find the direct child of chipGroup (the stack Group)
+      var hitObj=hits[0].object;
+      while(hitObj.parent&&hitObj.parent!==_3d.chipGroup)hitObj=hitObj.parent;
       for(var i=0;i<_3d.stacks.length;i++){
-        if(_3d.stacks[i].mesh===hit){_fidgetStack(i);break;}
+        if(_3d.stacks[i].mesh===hitObj){_fidgetStack(i);break;}
       }
     }
   });
@@ -4479,7 +4482,7 @@ function init3DChips(){
         if(c.done)return;
         var elapsed=now-_3d.dropStart-c.delay;
         if(elapsed<0){allDone=false;return;}
-        var t=Math.min(elapsed/600,1); // 600ms for dramatic slam
+        var t=Math.min(elapsed/280,1); // 280ms — fast realistic gravity slam
         // Bounce easing
         var e;
         if(t<1/2.75)e=7.5625*t*t;
@@ -4501,7 +4504,10 @@ function init3DChips(){
       var now2=performance.now();
       for(var fi=_3d._fidgets.length-1;fi>=0;fi--){
         var fa=_3d._fidgets[fi],fel=now2-fa.st;
-        if(fel>=fa.dur){fa.m.position.y=fa.by;fa.m.position.x=fa.bx||fa.m.position.x;fa.m.position.z=fa.bz||fa.m.position.z;fa.m.rotation.y=fa.bry;fa.m.rotation.z=fa.brz||0;_3d._fidgets.splice(fi,1);continue;}
+        if(fel>=fa.dur){
+          if(fa._spreadChips){fa._spreadChips.forEach(function(sc){_disposeSpreadChip(sc);_3d.chipGroup.remove(sc);});fa.m.visible=true;fa._spreadChips=null;}
+          fa.m.position.y=fa.by;fa.m.position.x=fa.bx||fa.m.position.x;fa.m.position.z=fa.bz||fa.m.position.z;fa.m.rotation.y=fa.bry;fa.m.rotation.z=fa.brz||0;_3d._fidgets.splice(fi,1);continue;
+        }
         fa.fn(fa,fel/fa.dur);
       }
     }
@@ -4526,7 +4532,7 @@ function init3DChips(){
   resizeObs.observe(container);
 }
 
-// ─── V11 CHIP SYSTEM: ONE cylinder per stack → zero z-fighting ───
+// ─── V12 CHIP SYSTEM: Individual chip meshes per stack → realistic imperfections ───
 
 // Helper: adjust RGB array by offset, return css rgb() string
 function _ac(r,a){return 'rgb('+Math.max(0,Math.min(255,r[0]+a))+','+Math.max(0,Math.min(255,r[1]+a))+','+Math.max(0,Math.min(255,r[2]+a))+')';}
@@ -4666,17 +4672,48 @@ function _chipBotTex(d){
   return _chipTexCache[d.label+'_bot'];
 }
 
-/* ONE cylinder per stack — height = count * CHIP_H, side texture shows all layers */
+/* Individual chip meshes per stack — realistic imperfections (misaligned stripes, jitter, tilt) */
 function _makeStackMesh(d,count){
+  var group=new THREE.Group();
   var totalH=count*CHIP_H;
-  var geo=new THREE.CylinderGeometry(CHIP_R,CHIP_R,totalH,64);
-  var mesh=new THREE.Mesh(geo,[
-    new THREE.MeshStandardMaterial({map:_chipSideTex(d,count),roughness:.72,metalness:.03}),
+  var sideMat=new THREE.MeshStandardMaterial({map:_chipSideTex(d,1),roughness:.72,metalness:.03});
+  var topMat=new THREE.MeshStandardMaterial({map:_chipTopTex(d),roughness:.65,metalness:.05});
+  var botMat=new THREE.MeshStandardMaterial({map:_chipBotTex(d),roughness:.85,metalness:.02});
+  var geo=new THREE.CylinderGeometry(CHIP_R,CHIP_R,CHIP_H,64);
+  for(var i=0;i<count;i++){
+    var chip=new THREE.Mesh(geo,[sideMat,topMat,botMat]);
+    chip.position.y=(i*CHIP_H)-(totalH/2)+CHIP_H/2+(i*0.001);
+    chip.rotation.y=(Math.random()-.5)*0.7; // ±0.35 rad — edge stripe misalignment
+    chip.position.x=(Math.random()-.5)*0.024; // ±0.012 lateral shift
+    chip.position.z=(Math.random()-.5)*0.024;
+    chip.rotation.x=(Math.random()-.5)*0.016; // ±0.008 micro-tilt
+    chip.rotation.z=(Math.random()-.5)*0.016;
+    chip.castShadow=true;chip.receiveShadow=false;
+    group.add(chip);
+  }
+  return group;
+}
+
+/* Single chip disc for spread fidget — shared geometry, random rotation for realistic look */
+var _singleChipGeo=null;
+function _makeSingleChipMesh(d){
+  if(!_singleChipGeo)_singleChipGeo=new THREE.CylinderGeometry(CHIP_R,CHIP_R,CHIP_H,64);
+  var mesh=new THREE.Mesh(_singleChipGeo,[
+    new THREE.MeshStandardMaterial({map:_chipSideTex(d,1),roughness:.72,metalness:.03}),
     new THREE.MeshStandardMaterial({map:_chipTopTex(d),roughness:.65,metalness:.05}),
     new THREE.MeshStandardMaterial({map:_chipBotTex(d),roughness:.85,metalness:.02})
   ]);
   mesh.castShadow=true;mesh.receiveShadow=false;
+  mesh.rotation.y=(Math.random()-.5)*0.7; // stripe misalignment
   return mesh;
+}
+
+/* Dispose materials on a spread chip (geometry is shared, never disposed) */
+function _disposeSpreadChip(sc){
+  if(sc.material){
+    if(Array.isArray(sc.material))sc.material.forEach(function(m){m.dispose();});
+    else sc.material.dispose();
+  }
 }
 
 /* Fidget animation for a clicked stack */
@@ -4686,6 +4723,11 @@ function _fidgetStack(si){
   for(var i=_3d._fidgets.length-1;i>=0;i--){
     if(_3d._fidgets[i].si===si){
       var old=_3d._fidgets[i];
+      // Clean up spread chips if they exist
+      if(old._spreadChips){
+        old._spreadChips.forEach(function(sc){_disposeSpreadChip(sc);_3d.chipGroup.remove(sc);});
+        old.m.visible=true;
+      }
       old.m.position.y=old.by;old.m.position.x=old.bx;old.m.position.z=old.bz;
       old.m.rotation.y=old.bry;old.m.rotation.z=old.brz;
       _3d._fidgets.splice(i,1);
@@ -4693,9 +4735,111 @@ function _fidgetStack(si){
   }
   var m=sk.mesh;
   var a={si:si,m:m,by:m.position.y,bx:m.position.x,bz:m.position.z,bry:m.rotation.y,brz:m.rotation.z||0,st:performance.now()};
-  var types=['bounce','spin','hop','launch','tilt','wobble'];
+  // Spread is weighted 2x more likely
+  var types=['spread','spread','bounce','spin','hop','launch','tilt','wobble'];
   var tr=types[Math.floor(Math.random()*types.length)];
-  if(tr==='bounce'){
+  if(tr==='spread'){
+    // Grab stack, lift, spread chips in air, then drop them one-by-one back down
+    var count=sk.sz||3;
+    var d=sk.d;
+    var singles=[];
+    for(var ci=0;ci<count;ci++){
+      var chip=_makeSingleChipMesh(d);
+      chip.position.copy(m.position);
+      chip.rotation.copy(m.rotation);
+      _3d.chipGroup.add(chip);
+      singles.push(chip);
+    }
+    a._spreadChips=singles;
+    a._slamPlayed={}; // track which chips have played their slam
+    m.visible=false;
+    var liftH=1.4; // how high the hand lifts the stack
+    var spreadGap=0.25; // gap between chips when spread in the air
+    var liftPhase=0.10; // 0-10% = quick lift
+    var holdPhase=0.25; // 10-25% = spread apart in the air
+    var dropPhase=1.0;  // 25-100% = chips fall one by one fast
+    a.dur=900+(count*50); // snappy — real chips fall fast
+    a.fn=function(a,t){
+      var stackH=count*CHIP_H;
+      // Base Y for each chip when stacked normally
+      function baseY(ci){return a.by-(stackH/2)+CHIP_H/2+ci*CHIP_H;}
+      // Spread Y when held in the air
+      function spreadY(ci){return a.by+liftH-(count-1)*spreadGap/2+ci*spreadGap;}
+
+      if(t<liftPhase){
+        // Phase 1: Lift entire stack up smoothly
+        var p=t/liftPhase;
+        var ease=1-Math.pow(1-p,3); // ease out
+        for(var ci=0;ci<singles.length;ci++){
+          singles[ci].position.y=baseY(ci)+liftH*ease;
+          singles[ci].position.x=a.bx;
+          singles[ci].position.z=a.bz;
+          singles[ci].rotation.z=0;
+        }
+      }else if(t<holdPhase){
+        // Phase 2: Spread chips apart in the air (still held)
+        var p=(t-liftPhase)/(holdPhase-liftPhase);
+        var ease=1-Math.pow(1-p,2);
+        for(var ci=0;ci<singles.length;ci++){
+          var lifted=baseY(ci)+liftH;
+          var target=spreadY(ci);
+          singles[ci].position.y=lifted+(target-lifted)*ease;
+          singles[ci].position.x=a.bx;
+          singles[ci].position.z=a.bz;
+          // Slight wobble while held
+          singles[ci].rotation.z=Math.sin(p*Math.PI*2+ci)*0.03;
+        }
+      }else{
+        // Phase 3: Release chips one by one from bottom to top
+        var dropT=(t-holdPhase)/(dropPhase-holdPhase);
+        for(var ci=0;ci<singles.length;ci++){
+          var dropDelay=ci*0.12; // stagger — bottom chip drops first
+          var chipT=(dropT-dropDelay)/(1-dropDelay*singles.length/(singles.length+1));
+          chipT=Math.max(0,Math.min(1,chipT));
+
+          var startY=spreadY(ci);
+          var endY=baseY(ci);
+
+          if(chipT<=0){
+            // Still held in the air
+            singles[ci].position.y=startY;
+            singles[ci].rotation.z=Math.sin(ci)*0.02;
+          }else if(chipT<1){
+            // Falling — bounce easing
+            var bt=chipT;
+            var e;
+            if(bt<1/2.75)e=7.5625*bt*bt;
+            else if(bt<2/2.75){bt-=1.5/2.75;e=7.5625*bt*bt+0.75;}
+            else if(bt<2.5/2.75){bt-=2.25/2.75;e=7.5625*bt*bt+0.9375;}
+            else{bt-=2.625/2.75;e=7.5625*bt*bt+0.984375;}
+            singles[ci].position.y=startY+(endY-startY)*e;
+            singles[ci].rotation.z=(1-chipT)*Math.sin(ci)*0.02;
+            // Play slam sound when chip first lands (e > 0.95)
+            if(e>0.95&&!a._slamPlayed[ci]){
+              a._slamPlayed[ci]=true;
+              if(_userHasInteracted)_playChipSlamSound(ci,singles.length);
+            }
+          }else{
+            // Landed
+            singles[ci].position.y=endY;
+            singles[ci].rotation.z=0;
+            if(!a._slamPlayed[ci]){
+              a._slamPlayed[ci]=true;
+              if(_userHasInteracted)_playChipSlamSound(ci,singles.length);
+            }
+          }
+          singles[ci].position.x=a.bx;
+          singles[ci].position.z=a.bz;
+        }
+      }
+      // Clean up when done
+      if(t>=1){
+        a._spreadChips.forEach(function(sc){_disposeSpreadChip(sc);_3d.chipGroup.remove(sc);});
+        a.m.visible=true;
+        a._spreadChips=null;
+      }
+    };
+  }else if(tr==='bounce'){
     // Quick satisfying bounce
     a.dur=500;
     a.fn=function(a,t){a.m.position.y=a.by+Math.sin(t*Math.PI)*.35;};
@@ -4786,6 +4930,79 @@ function _playChipFidgetSound(type){
       },430); // ~landing time
     }
   }catch(e){}
+}
+
+// Per-stack slam sound — heavy thud + ceramic crack when each stack hits the felt
+function _playChipSlamSound(idx,total){
+  try{
+    var ctx=new(window.AudioContext||window.webkitAudioContext)();
+    var t=ctx.currentTime;
+    var pitchVar=0.85+Math.random()*0.3;
+    var isLast=(idx===total-1);
+    var vol=isLast?1.3:0.9+Math.random()*0.3; // last stack hits hardest
+
+    // Master output
+    var master=ctx.createGain();master.gain.value=vol*0.5;
+    master.connect(ctx.destination);
+
+    // LAYER 1: Deep table thud — low freq impact
+    var thud=ctx.createOscillator(),tg=ctx.createGain();
+    thud.type='sine';
+    thud.frequency.setValueAtTime(120*pitchVar,t);
+    thud.frequency.exponentialRampToValueAtTime(35,t+0.18);
+    tg.gain.setValueAtTime(0.15*vol,t);
+    tg.gain.exponentialRampToValueAtTime(0.001,t+0.22);
+    thud.connect(tg);tg.connect(master);
+    thud.start(t);thud.stop(t+0.25);
+
+    // LAYER 2: Sharp ceramic crack — the chip-on-felt impact
+    var crack=ctx.createOscillator(),cg=ctx.createGain();
+    crack.type='sine';
+    crack.frequency.setValueAtTime(4200*pitchVar,t);
+    crack.frequency.exponentialRampToValueAtTime(1500*pitchVar,t+0.006);
+    cg.gain.setValueAtTime(0.08*vol,t);
+    cg.gain.exponentialRampToValueAtTime(0.001,t+0.01);
+    crack.connect(cg);cg.connect(master);
+    crack.start(t);crack.stop(t+0.015);
+
+    // LAYER 3: Noise burst — impact texture
+    var nLen=Math.floor(ctx.sampleRate*0.015);
+    var nBuf=ctx.createBuffer(1,nLen,ctx.sampleRate);
+    var nd=nBuf.getChannelData(0);
+    for(var j=0;j<nLen;j++)nd[j]=(Math.random()*2-1)*Math.pow(1-j/nLen,2);
+    var nSrc=ctx.createBufferSource();nSrc.buffer=nBuf;
+    var nFilt=ctx.createBiquadFilter();
+    nFilt.type='lowpass';nFilt.frequency.value=2000*pitchVar;nFilt.Q.value=1.5;
+    var ng=ctx.createGain();
+    ng.gain.setValueAtTime(0.1*vol,t);
+    ng.gain.exponentialRampToValueAtTime(0.001,t+0.02);
+    nSrc.connect(nFilt);nFilt.connect(ng);ng.connect(master);
+    nSrc.start(t);nSrc.stop(t+0.02);
+
+    // LAYER 4: Ceramic ring-out (brief resonance after landing)
+    var ring=ctx.createOscillator(),rg=ctx.createGain();
+    ring.type='sine';
+    ring.frequency.setValueAtTime(2800*pitchVar,t+0.005);
+    ring.frequency.exponentialRampToValueAtTime(1800*pitchVar,t+0.04);
+    rg.gain.setValueAtTime(0.025*vol,t+0.005);
+    rg.gain.exponentialRampToValueAtTime(0.001,t+0.06);
+    ring.connect(rg);rg.connect(master);
+    ring.start(t+0.005);ring.stop(t+0.07);
+
+    // LAYER 5: Felt absorption — soft low thump
+    var feltLen=Math.floor(ctx.sampleRate*0.04);
+    var feltBuf=ctx.createBuffer(1,feltLen,ctx.sampleRate);
+    var fd=feltBuf.getChannelData(0);
+    for(var j=0;j<feltLen;j++)fd[j]=(Math.random()*2-1)*Math.pow(1-j/feltLen,5);
+    var feltSrc=ctx.createBufferSource();feltSrc.buffer=feltBuf;
+    var feltFilt=ctx.createBiquadFilter();feltFilt.type='lowpass';feltFilt.frequency.value=300;
+    var feltG=ctx.createGain();feltG.gain.value=0.06*vol;
+    feltSrc.connect(feltFilt);feltFilt.connect(feltG);feltG.connect(master);
+    feltSrc.start(t);feltSrc.stop(t+0.05);
+
+    // Clean up context after sounds finish
+    setTimeout(function(){ctx.close();},500);
+  }catch(e){console.warn('[TradeEdge] Slam audio error:',e);}
 }
 
 function _playChipDropSound(count){
@@ -4971,8 +5188,13 @@ function renderChips(balance){
   if(balance===_lastChipBalance&&_3d.allChips.length>0)return;
   _lastChipBalance=balance;
 
-  // Clear existing chips
-  while(_3d.chipGroup.children.length>0)_3d.chipGroup.remove(_3d.chipGroup.children[0]);
+  // Clear existing chips — dispose materials on child meshes inside each stack Group
+  while(_3d.chipGroup.children.length>0){
+    var obj=_3d.chipGroup.children[0];
+    if(obj.isGroup){obj.children.forEach(function(c){if(c.material){if(Array.isArray(c.material))c.material.forEach(function(m){m.dispose();});else c.material.dispose();}});}
+    else if(obj.material){if(Array.isArray(obj.material))obj.material.forEach(function(m){m.dispose();});else obj.material.dispose();}
+    _3d.chipGroup.remove(obj);
+  }
   _3d.allChips=[];_3d.stacks=[];_3d._fidgets=[];
 
   var countEl=document.getElementById('chip-tray-count');
@@ -5000,7 +5222,7 @@ function renderChips(balance){
   var positions=[],totalStacks=stacks.length;
   var _numRows=totalStacks<=4?1:totalStacks<=9?2:3;
   var _perRow=Math.ceil(totalStacks/_numRows);
-  var _xSp=1.5,_zSp=1.4; // wider spacing for dramatic drop spread
+  var _xSp=1.05,_zSp=1.05; // tight spacing — stacks close together like a real table
   for(var _si=0;_si<totalStacks;_si++){
     var _row=Math.floor(_si/_perRow),_col=_si%_perRow;
     var _rowLen=Math.min(_perRow,totalStacks-_row*_perRow);
@@ -5010,7 +5232,7 @@ function renderChips(balance){
     });
   }
 
-  // Create meshes — ONE cylinder per stack (V11: zero z-fighting)
+  // Create meshes — individual chip Groups per stack (V12: realistic imperfections)
   _3d.stacks=[];
   try{
   stacks.forEach(function(stack,si){
@@ -5019,13 +5241,15 @@ function renderChips(balance){
     var totalH=stack.size*CHIP_H;
     var targetY=totalH/2+0.005; // slightly above felt, no z-fight
     mesh.rotation.y=(Math.random()-.5)*0.15;
-    var dropH=5+Math.random()*2; // 5-7 units above — dramatic slam height
-    mesh.position.set(pos.x+(Math.random()-.5)*.8,targetY+dropH,pos.z+(Math.random()-.5)*.6);
-    mesh.rotation.x=(Math.random()-.5)*0.3; // slight tumble during fall
-    mesh.rotation.z=(Math.random()-.5)*0.3;
+    var dropH=4+Math.random()*2; // 4-6 units — realistic toss height
+    var spreadX=pos.x+(Math.random()-.5)*1.8;
+    var spreadZ=pos.z+(Math.random()-.5)*1.4;
+    mesh.position.set(spreadX,targetY+dropH,spreadZ);
+    mesh.rotation.x=(Math.random()-.5)*0.4;
+    mesh.rotation.z=(Math.random()-.5)*0.4;
     _3d.chipGroup.add(mesh);
-    _3d.allChips.push({mesh:mesh,targetY:targetY,startY:targetY+dropH,delay:si*140,done:false,
-      startX:mesh.position.x,targetX:pos.x,startZ:mesh.position.z,targetZ:pos.z,
+    _3d.allChips.push({mesh:mesh,targetY:targetY,startY:targetY+dropH,delay:si*120,done:false,
+      startX:spreadX,targetX:pos.x,startZ:spreadZ,targetZ:pos.z,
       startRX:mesh.rotation.x,startRZ:mesh.rotation.z});
     _3d.stacks.push({mesh:mesh,pos:pos,d:stack.denom,sz:stack.size});
   });
@@ -5042,11 +5266,24 @@ function renderChips(balance){
     countEl.textContent=total+' chips  ·  '+parts.join('  ·  ');
   }
 
-  // Trigger drop animation + sound
+  // Trigger drop animation + per-stack slam sounds
   console.log('[TradeEdge] renderChips: created '+stacks.length+' stacks, '+_3d.allChips.length+' meshes, balance=$'+balance.toFixed(2));
   _3d.dropStart=performance.now();
-  setTimeout(function(){if(_userHasInteracted)_playChipDropSound(Math.min(stacks.length,20));},100);
+  // Schedule a slam sound for each stack landing (delay + 600ms fall duration)
+  _3d.allChips.forEach(function(c,idx){
+    var landTime=c.delay+280; // delay + drop duration
+    setTimeout(function(){if(_userHasInteracted)_playChipSlamSound(idx,_3d.allChips.length);},landTime);
+  });
 }
+
+// TEST: Render chips at any balance — call from console: testChips(50000)
+window.testChips=function(bal){
+  _lastChipBalance=-1;
+  _userHasInteracted=true;
+  if(_3d._fidgets){_3d._fidgets.forEach(function(f){if(f._spreadChips)f._spreadChips.forEach(function(sc){_disposeSpreadChip(sc);_3d.chipGroup.remove(sc);});});_3d._fidgets=[];}
+  renderChips(bal||50000);
+  console.log('[TradeEdge] testChips: rendering $'+(bal||50000).toLocaleString());
+};
 
 // CSS poker chip fallback — shown when WebGL/THREE.js is unavailable
 function _renderCSSChips(balance,container){
