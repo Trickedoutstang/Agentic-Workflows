@@ -1,0 +1,11 @@
+{
+  "webhookUrl": "http://localhost:5050",
+  "passphrase": "slickrick_tradeedge",
+  "activeAccount": "amp_live",
+  "accounts": [
+    { "name": "amp_live", "label": "AMP Live" },
+    { "name": "amp_demo", "label": "AMP Demo" }
+  ],
+  "mode": "discovery",
+  "cdpPort": 9222
+}
