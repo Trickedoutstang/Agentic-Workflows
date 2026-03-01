@@ -1118,6 +1118,27 @@ kbd{background:var(--s3);border:1px solid var(--b3);border-radius:4px;padding:2p
           <div style="font-size:.68rem;color:var(--t3);font-family:var(--mono);line-height:1.6">Setup: pip3 install flask &rarr; brew install ngrok &rarr; bash start-webhook.sh &rarr; copy ngrok URL into TradingView alert</div>
         </div>
         <div class="cc" style="grid-column:1/-1">
+          <div class="cc-title">CDP CAPTURE</div>
+          <p style="font-size:.74rem;color:var(--t3);margin-bottom:8px;line-height:1.5">Auto-capture fills from TradingView Desktop via Chrome DevTools Protocol. Requires TradingView launched with <code style="background:var(--s2);padding:2px 6px;border-radius:4px;font-size:.7rem">--remote-debugging-port</code>.</p>
+          <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin-bottom:10px">
+            <div class="fg">
+              <label>CDP Port</label>
+              <input id="set-cdp-port" type="number" placeholder="9222" oninput="S.cdpPort=parseInt(this.value)||9222;save();">
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <button class="btn btn-ghost btn-sm" onclick="testCDP()">Test CDP Connection</button>
+              <span id="cdp-status" style="font-size:.68rem;color:var(--t3)"></span>
+            </div>
+          </div>
+          <div style="font-size:.72rem;color:var(--t3);line-height:1.7;margin-top:4px">
+            <strong style="color:var(--accent)">Setup in 3 steps:</strong><br>
+            1. Install Launch Agent: <code style="background:var(--s2);padding:2px 6px;border-radius:4px;font-size:.68rem">bash cdp-capture/install-launchagent.sh</code><br>
+            2. Start capture: <code style="background:var(--s2);padding:2px 6px;border-radius:4px;font-size:.68rem">bash cdp-capture/start-capture.sh --mode capture</code><br>
+            3. Click <em>Test CDP Connection</em> above to verify
+          </div>
+          <div style="font-size:.65rem;color:var(--t3);margin-top:6px">Full docs: <code style="background:var(--s2);padding:1px 4px;border-radius:3px;font-size:.63rem">cdp-capture/README.md</code></div>
+        </div>
+        <div class="cc" style="grid-column:1/-1">
           <div class="cc-title">DATA MANAGEMENT</div>
           <div style="display:flex;gap:10px;flex-wrap:wrap">
             <button class="btn btn-ghost btn-sm" onclick="exportAllCSV()">Export All Data (CSV)</button>
@@ -4073,6 +4094,8 @@ function renderSettings(){
   var rae=document.getElementById('rule-alarm-enabled');if(rae)rae.checked=rules.alarmEnabled!==false;
   // V2.1: Populate live data URL
   var liveUrlEl=document.getElementById('set-live-url');if(liveUrlEl)liveUrlEl.value=S.liveDataUrl||'';
+  // CDP Capture: Populate port
+  var cdpPortEl=document.getElementById('set-cdp-port');if(cdpPortEl)cdpPortEl.value=S.cdpPort||9222;
   // Change 27: Render violation history
   var vhEl=document.getElementById('violation-history');
   if(vhEl&&S.violations&&S.violations.length){
@@ -5238,6 +5261,27 @@ function _tryLiveData(){
   }catch(e){
     if(statusEl){statusEl.textContent='Error: '+e.message;statusEl.style.color='var(--red)';}
   }
+}
+// CDP Capture: test connection to TradingView CDP port
+function testCDP(){
+  var port=S.cdpPort||9222;
+  var el=document.getElementById('cdp-status');
+  if(el){el.textContent='Testing...';el.style.color='var(--gold)';}
+  fetch('http://localhost:'+port+'/json').then(function(r){
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(targets){
+    var pages=targets.filter(function(t){return t.type==='page';});
+    if(el){
+      el.innerHTML='<span style="color:var(--green)">\u25CF</span> Connected — '+pages.length+' page target'+(pages.length!==1?'s':'');
+      el.style.color='var(--green)';
+    }
+  }).catch(function(e){
+    if(el){
+      el.innerHTML='<span style="color:var(--red)">\u25CF</span> Not reachable — is TradingView running with CDP?';
+      el.style.color='var(--red)';
+    }
+  });
 }
 
 // V2.3: Holographic PADD (replaces leather journal)
