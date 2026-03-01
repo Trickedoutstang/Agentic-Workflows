@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" onerror="window._threeJsFailed=true;console.warn('[TradeEdge] THREE.js CDN failed to load — using CSS chip fallback');"></script>
+<script src="https://unpkg.com/lightweight-charts@4/dist/lightweight-charts.standalone.production.js" async onerror="console.warn('[TradeEdge] Lightweight Charts CDN unavailable — using procedural charts');"></script>
+<script>if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+<title>TradeEdge — Intra Circle Trading</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+<!-- CSS Modules -->
+<link rel="stylesheet" href="css/theme.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/dashboard.css">
+<link rel="stylesheet" href="css/modals.css">
+<link rel="stylesheet" href="css/cockpit.css">
+<link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+<!-- V3.1: Weapon crosshair overlay -->
+<div class="weapon-crosshair" id="weapon-crosshair"><div class="ch-ring"></div></div>
+<!-- V3.1: Self-destruct overlay -->
+<div class="self-destruct-overlay" id="sd-overlay"></div>
+
+<!-- SPLASH SCREEN -->
+<div class="splash" id="splash">
+  <img class="splash-logo" src="data:image/png;base64,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" alt="TradeEdge ICT">
+  <div class="splash-title">TradeEdge</div>
+  <div class="splash-sub">Intra Circle Trading</div>
+  <div class="splash-bar"><div class="splash-fill" id="splash-fill"></div></div>
+  <canvas id="splash-bullet"></canvas>
+  <div class="splash-bullet-text">SILVER BULLET</div>
+</div>
+<script>
+// Splash screen with silver bullet animation
+(function(){
+  var splash=document.getElementById('splash');
+  var fill=document.getElementById('splash-fill');
+  if(!splash)return;
+  // Animate progress bar
+  var steps=[20,45,70,90,100],si=0;
+  var iv=setInterval(function(){
+    if(fill&&si<steps.length){fill.style.width=steps[si]+'%';si++;}
+    if(si>=steps.length)clearInterval(iv);
+  },250);
+  // Always remove splash
+  setTimeout(function(){
+    splash.style.opacity='0';
+    setTimeout(function(){splash.remove();},600);
+  },1800);
+  // Silver bullet canvas animation
+  var cv=document.getElementById('splash-bullet');
+  if(!cv)return;
+  var dpr=window.devicePixelRatio||1;
+  var cssW=340,cssH=60;
+  cv.width=cssW*dpr;cv.height=cssH*dpr;
+  var ctx=cv.getContext('2d');
+  ctx.scale(dpr,dpr);
+  var W=cssW,H=cssH,cy=H/2;
+  var bLen=52,bW=14;
+  var bx=-bLen-30;
+  var spd=W/85; // cross canvas in ~1.4s at 60fps
+  var parts=[];
+  function drawBullet(x,y){
+    ctx.save();
+    // Outer cyan energy glow (double layer)
+    ctx.shadowColor='#00d4ff';ctx.shadowBlur=24;
+    // Bullet body — silver metallic gradient
+    var g=ctx.createLinearGradient(x,y-bW/2,x,y+bW/2);
+    g.addColorStop(0,'#a0a0a0');g.addColorStop(0.2,'#e8e8e8');
+    g.addColorStop(0.4,'#ffffff');g.addColorStop(0.5,'#f4f4f4');
+    g.addColorStop(0.6,'#ffffff');g.addColorStop(0.8,'#d8d8d8');
+    g.addColorStop(1,'#808080');
+    ctx.fillStyle=g;
+    ctx.beginPath();
+    ctx.moveTo(x-bLen/2,y-bW/2);
+    ctx.lineTo(x+bLen/4,y-bW/2);
+    ctx.quadraticCurveTo(x+bLen/2+2,y,x+bLen/2+2,y);
+    ctx.quadraticCurveTo(x+bLen/2+2,y,x+bLen/4,y+bW/2);
+    ctx.lineTo(x-bLen/2,y+bW/2);
+    ctx.arc(x-bLen/2,y,bW/2,Math.PI/2,-Math.PI/2,false);
+    ctx.closePath();ctx.fill();
+    // Second glow pass for intensity
+    ctx.shadowBlur=12;ctx.fill();
+    // Specular highlight stripe
+    ctx.shadowBlur=0;
+    var sg=ctx.createLinearGradient(x-bLen/3,0,x+bLen/3,0);
+    sg.addColorStop(0,'rgba(255,255,255,0)');
+    sg.addColorStop(0.2,'rgba(255,255,255,0.8)');
+    sg.addColorStop(0.5,'rgba(255,255,255,0.5)');
+    sg.addColorStop(0.8,'rgba(255,255,255,0.7)');
+    sg.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=sg;
+    ctx.fillRect(x-bLen/3,y-bW/3,bLen*0.65,bW/4);
+    // Casing ring near back
+    ctx.strokeStyle='rgba(160,160,160,0.5)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(x-bLen/6,y-bW/2+1);ctx.lineTo(x-bLen/6,y+bW/2-1);ctx.stroke();
+    ctx.restore();
+  }
+  function spawn(x,y){
+    for(var i=0;i<4;i++){
+      var isSilver=Math.random()>0.35;
+      parts.push({
+        x:x-bLen/2+(Math.random()-0.5)*12,
+        y:y+(Math.random()-0.5)*bW*2,
+        vx:-(Math.random()*3+1),vy:(Math.random()-0.5)*2,
+        life:20,max:20,
+        sz:Math.random()*2.5+1,
+        c:isSilver?'#e0e0e0':'#00d4ff'
+      });
+    }
+  }
+  function drawParts(){
+    for(var i=parts.length-1;i>=0;i--){
+      var p=parts[i];p.x+=p.vx;p.y+=p.vy;p.life--;
+      if(p.life<=0){parts.splice(i,1);continue;}
+      var a=p.life/p.max;
+      ctx.save();ctx.globalAlpha=a*0.9;
+      ctx.shadowColor=p.c;ctx.shadowBlur=6;
+      ctx.fillStyle=p.c;
+      ctx.beginPath();ctx.arc(p.x,p.y,p.sz*a,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+    }
+  }
+  function frame(){
+    ctx.clearRect(0,0,W,H);
+    bx+=spd;
+    spawn(bx,cy);drawParts();drawBullet(bx,cy);
+    if(bx<W+bLen+30)requestAnimationFrame(frame);
+  }
+  setTimeout(frame,300);
+})();
+</script>
+
+<button class="menu-toggle" id="menu-toggle" onclick="toggleSidebar()">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+</button>
+<div class="sidebar-backdrop" id="sidebar-backdrop" onclick="toggleSidebar()"></div>
+
+
+<noscript><style>.splash{display:none!important}</style><div style="padding:40px;text-align:center;color:#fff;font-family:sans-serif"><h2>JavaScript Required</h2><p>Please open this file in Safari for full functionality.</p></div></noscript>
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="logo-wrap">
+    <div class="logo-top">
+      <div class="logo-icon">
+        <img src="data:image/png;base64,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" alt="ICT">
+      </div>
+      <div class="logo-name">TradeEdge</div>
+    </div>
+    <div class="logo-sub">Intra Circle Trading · ICT · AMP</div>
+  </div>
+  <div class="nav">
+    <div class="nlabel">Overview</div>
+    <div class="ni active" data-view="dashboard" onclick="go('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </div>
+    <div class="ni" data-view="trades" onclick="go('trades')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
+      Trade Log
+      <span class="badge-count" id="trade-count-badge" style="display:none">0</span>
+    </div>
+    <div class="ni" data-view="journal" onclick="go('journal')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      Journal
+    </div>
+    <div class="nlabel">Analytics</div>
+    <div class="ni" data-view="analytics" onclick="go('analytics')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Performance
+    </div>
+    <div class="ni" data-view="ict" onclick="go('ict')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      ICT Analytics
+    </div>
+    <div class="ni" data-view="weekly" onclick="go('weekly')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Weekly Report
+    </div>
+    <div class="nlabel">Data</div>
+    <div class="ni" data-view="import" onclick="go('import')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Import Data
+    </div>
+    <div class="ni" data-view="settings" onclick="go('settings')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings
+    </div>
+    <div class="ni" data-view="help" onclick="go('help')" style="background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.15);color:var(--accent)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Help & Tutorial
+    </div>
+    <div class="nlabel" style="margin-top:8px">COCKPIT</div>
+    <div class="ni" id="btn-weapons" onclick="_toggleWeaponMode()" style="color:#ff4444">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
+      Weapons
+    </div>
+    <div class="ni" id="btn-selfdestruct" onclick="_initSelfDestruct()" style="color:#ff2222;border:1px solid rgba(255,34,34,0.2)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+      Self-Destruct
+    </div>
+  </div>
+  <div class="sb-footer">
+    <div class="acct-card">
+      <div class="acct-label">Account · AMP Futures</div>
+      <div class="acct-name" id="acct-name">Trader</div>
+      <div class="acct-row">
+        <div class="acct-bal" id="sb-bal" style="color:var(--t3)">$0.00</div>
+        <div class="acct-dot"></div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="page-title" id="page-title">Dashboard</div>
+    <button class="btn btn-ghost btn-sm session-btn" onclick="openPreSession()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span>Start Session</span>
+    </button>
+    <button class="btn btn-ghost btn-sm" onclick="go('import')">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Import
+    </button>
+    <button class="btn btn-accent btn-sm" onclick="openTrade()">+ Add Trade</button>
+  </div>
+
+  <div class="content">
+
+    <!-- ═══ DASHBOARD ═══ -->
+    <div class="view active" id="view-dashboard">
+      <div id="dash-debug" style="font-size:.7rem;font-family:var(--mono);padding:6px 12px;margin-bottom:8px;background:var(--s2);border-radius:6px;display:none"></div>
+      <div class="balance-bar" id="balance-bar">
+        <div class="bb-item">
+          <div class="bb-label">Account</div>
+          <div class="bb-name" id="bb-name">Trader</div>
+        </div>
+        <div class="bb-sep"></div>
+        <div class="bb-item" style="position:relative">
+          <div class="bb-label">Account Balance</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="bb-val" id="bb-balance" style="color:var(--green)">$0.00</div>
+          </div>
+          <div id="bb-breakdown" style="font-size:.5rem;font-family:var(--mono);color:rgba(255,255,255,.25);margin-top:2px;letter-spacing:.5px"></div>
+        </div>
+        <div class="bb-sep"></div>
+        <div class="bb-item">
+          <div class="bb-label">Net P&L <span id="bb-trade-count" style="font-size:.48rem;color:rgba(255,255,255,.25);font-family:var(--mono)"></span></div>
+          <div class="bb-val" id="bb-pnl" style="color:var(--t3);font-size:1.1rem">$0.00</div>
+        </div>
+      </div>
+      <!-- 3D CHIP TRAY -->
+      <div class="chip-tray" id="chip-tray">
+        <div class="chip-tray-scan"></div>
+        <div class="chip-tray-hud">
+          <div class="chip-tray-label">Chip Stack</div>
+          <div class="chip-tray-count" id="chip-tray-count"></div>
+          <button id="chip-test-btn" onclick="window.testChipShowcase()" style="pointer-events:auto;position:absolute;top:4px;right:4px;background:rgba(255,255,255,.15);color:#0f8;border:1px solid rgba(0,212,255,.4);border-radius:4px;padding:3px 10px;font-size:.6rem;font-family:var(--mono);cursor:pointer;z-index:10;letter-spacing:1px">TEST ALL</button>
+          <!-- V3.1: Live symbol input -->
+          <div style="pointer-events:auto;position:absolute;top:4px;right:80px;z-index:10">
+            <input class="live-symbol-input" id="live-symbol-input" placeholder="NQ 1m" title="Type symbol + timeframe (e.g. MNQ 5m) and press Enter to display on monitor #1" onkeydown="if(event.key==='Enter'){_setMonitorSymbol(0,this.value);this.style.borderColor='#00ff88';setTimeout(function(){document.getElementById('live-symbol-input').style.borderColor='';},800);}">
+          </div>
+        </div>
+        <canvas id="chip-canvas" style="display:none"></canvas>
+        <div id="chip-css-fallback" style="display:none"></div>
+        <!-- Change 19: News alert HUD -->
+        <div class="news-alert-hud" id="news-alert-hud" style="display:none">
+          <div class="news-alert-icon"></div>
+          <div class="news-alert-text"></div>
+        </div>
+        <!-- Change 42: Killzone timer HUD -->
+        <div class="kz-timer-hud" id="kz-timer-hud" style="display:none"></div>
+        <!-- Change 25: Nuclear alarm overlay -->
+        <div id="nuclear-alarm" style="display:none;position:absolute;inset:0;z-index:10;background:rgba(40,0,0,.9);backdrop-filter:blur(4px);flex-direction:column;align-items:center;justify-content:center;gap:8px;border:2px solid #ff3d5a;border-radius:var(--r);animation:nuclearPulse 0.6s ease-in-out infinite">
+          <div style="font-size:2rem">&#9762;</div>
+          <div style="font-family:var(--display);font-size:1.3rem;letter-spacing:2px;color:#ff3d5a">DISCIPLINE VIOLATION</div>
+          <div id="alarm-details" style="font-family:var(--mono);font-size:.7rem;color:#ff8888;text-align:center;max-width:90%;line-height:1.6"></div>
+          <button class="btn btn-ghost" onclick="dismissAlarm()" style="margin-top:8px;border-color:rgba(255,61,90,.5);color:#ff3d5a">ACKNOWLEDGE</button>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:6px">
+        <button class="btn btn-ghost btn-sm" onclick="shareDashboard()" style="font-size:.65rem;padding:3px 10px;gap:4px">&#x2934; Share Dashboard</button>
+      </div>
+      <div class="mgrid" id="mgrid"></div>
+      
+      <!-- ═══ TRADING CALENDAR ═══ -->
+      <div class="cc" style="margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <button class="btn btn-ghost btn-sm" onclick="calNav(-1)" style="padding:4px 10px">◀</button>
+          <div class="cc-title" id="cal-title" style="margin:0;font-size:.85rem">TRADING CALENDAR</div>
+          <button class="btn btn-ghost btn-sm" onclick="calNav(1)" style="padding:4px 10px">▶</button>
+        </div>
+        <div class="cal-summary" id="cal-summary" style="display:flex;gap:16px;justify-content:center;margin-bottom:12px;font-size:.72rem;font-family:var(--mono)"></div>
+        <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px"></div>
+      </div>
+      
+      <div class="crow cr2">
+        <div class="cc">
+          <div class="cc-title">EQUITY CURVE <span id="eq-total"></span></div>
+          <svg id="eq-svg" style="width:100%;height:170px;overflow:visible;display:block"></svg>
+        </div>
+        <div class="cc">
+          <div class="cc-title">WIN / LOSS RATIO</div>
+          <div style="display:flex;align-items:center;justify-content:center;height:170px">
+            <canvas id="donut-c" width="170" height="170"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="crow cr2e">
+        <div class="cc">
+          <div class="cc-title">P&L BY DAY OF WEEK</div>
+          <canvas id="dow-c" style="width:100%;height:120px;display:block"></canvas>
+        </div>
+        <div class="cc">
+          <div class="cc-title">P&L BY KILLZONE</div>
+          <div id="kz-chart" style="padding-top:4px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ TRADE LOG ═══ -->
+    <div class="view" id="view-trades">
+      <div class="frow">
+        <input class="search" id="srch" placeholder="Search symbol, tag, setup…" oninput="renderTrades()">
+        <div class="fchip on" data-f="all" onclick="setF('all',this)">ALL</div>
+        <div class="fchip" data-f="win" onclick="setF('win',this)">WINNERS</div>
+        <div class="fchip" data-f="loss" onclick="setF('loss',this)">LOSERS</div>
+        <div class="fchip" data-f="long" onclick="setF('long',this)">LONG</div>
+        <div class="fchip" data-f="short" onclick="setF('short',this)">SHORT</div>
+        <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="exportCSV()">Export CSV</button>
+      </div>
+      <div class="tcard">
+        <div class="tcard-hdr">
+          <span class="tcard-title">Trade Log</span>
+          <span id="tlog-count" style="font-family:var(--mono);font-size:.65rem;color:var(--t3)"></span>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr>
+              <th>Date</th><th>Time</th><th>Symbol</th><th>Side</th><th>Qty</th>
+              <th>Entry</th><th>Exit</th><th>SL / $Risk</th><th>TP / $Target</th>
+              <th>Gross P&L</th><th>Fees</th><th>Net P&L</th>
+              <th>R:R</th><th>Exit Reason</th><th>Setup</th><th>Killzone</th><th>Emotion</th><th>⭐</th><th>Result</th><th>Chart</th>
+            </tr></thead>
+            <tbody id="trade-tbody"></tbody>
+          </table>
+        </div>
+        <div id="trade-empty" class="empty" style="display:none">
+          <div class="empty-icon">📋</div>
+          <h3>No trades yet</h3>
+          <p>Import your TradingView CSVs or add trades manually.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ JOURNAL ═══ -->
+    <div class="view" id="view-journal">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:14px;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="logTradeJournal()">📝 Log Post-Trade</button>
+        <button class="btn btn-accent btn-sm" onclick="openJournal()">+ Daily Journal</button>
+      </div>
+      <div id="journal-list"></div>
+      <div id="journal-empty" class="empty" style="display:none">
+        <div class="empty-icon">✍️</div>
+        <h3>No journal entries yet</h3>
+        <p>Start your pre-market session or add a daily journal entry.</p>
+      </div>
+    </div>
+
+    <!-- ═══ ANALYTICS ═══ -->
+    <div class="view" id="view-analytics">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="cc">
+          <div class="cc-title">PERFORMANCE STATS</div>
+          <div id="perf-stats"></div>
+        </div>
+        <div class="cc">
+          <div class="cc-title">P&L BY SYMBOL</div>
+          <div id="sym-stats"></div>
+        </div>
+        <div class="cc" style="grid-column:1/-1">
+          <div class="cc-title">ACTIVITY CALENDAR</div>
+          <div class="heatmap-wrap"><div class="heatmap" id="heatmap"></div></div>
+        </div>
+        <div class="cc">
+          <div class="cc-title">STREAK ANALYSIS</div>
+          <div id="streak-stats"></div>
+        </div>
+        <div class="cc">
+          <div class="cc-title">RISK METRICS</div>
+          <div id="risk-stats"></div>
+        </div>
+        <div class="cc">
+          <div class="cc-title">MISTAKE FREQUENCY</div>
+          <div id="mistake-stats"></div>
+        </div>
+        <div class="cc">
+          <div class="cc-title">PSYCHOLOGICAL SCORE OVER TIME</div>
+          <svg id="psych-svg" style="width:100%;height:120px;display:block;overflow:visible"></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ ICT ANALYTICS ═══ -->
+    <div class="view" id="view-ict">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="cc" style="grid-column:1/-1">
+          <div class="cc-title">ICT SETUP WIN RATE</div>
+          <div id="ict-setups"></div>
+        </div>
+        <div class="cc">
+          <div class="cc-title">KILLZONE PERFORMANCE</div>
+          <div id="kz-perf"></div>
+        </div>
+        <div class="cc">
+          <div class="cc-title">ICT CHECKLIST COMPLIANCE</div>
+          <div id="ckl-compliance"></div>
+        </div>
+        <div class="cc">
+          <div class="cc-title">HTF BIAS ACCURACY</div>
+          <div id="bias-stats"></div>
+        </div>
+        <div class="cc">
+          <div class="cc-title">TRADE TIMING ANALYSIS</div>
+          <canvas id="timing-c" style="width:100%;height:140px;display:block"></canvas>
+        </div>
+        <div class="cc" style="grid-column:1/-1">
+          <div class="cc-title">HOLD TIME BY KILLZONE</div>
+          <div id="kz-hold-times"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ WEEKLY REPORT ═══ -->
+    <div class="view" id="view-weekly">
+      <div id="weekly-list"></div>
+      <div id="weekly-empty" class="empty" style="display:none">
+        <div class="empty-icon">📅</div>
+        <h3>No weekly data yet</h3>
+        <p>Add at least a week of trades to see your weekly reports.</p>
+      </div>
+    </div>
+
+    <!-- ═══ IMPORT ═══ -->
+    <div class="view" id="view-import">
+      <div class="import-grid">
+        <div class="import-card" id="ic-history">
+          <div style="font-family:var(--mono);font-size:.58rem;color:var(--accent);letter-spacing:1px;margin-bottom:4px">STEP 1</div>
+          <div class="import-card-icon">📊</div>
+          <div class="import-card-name">Filled Orders</div>
+          <div class="import-card-desc">AMP filled orders CSV — your trades</div>
+          <div class="import-card-status" id="ic-history-status" style="color:var(--t3)">No file loaded</div>
+        </div>
+        <div class="import-card" id="ic-cancelled">
+          <div style="font-family:var(--mono);font-size:.58rem;color:var(--accent2);letter-spacing:1px;margin-bottom:4px">STEP 2</div>
+          <div class="import-card-icon">🎯</div>
+          <div class="import-card-name">Cancelled Orders</div>
+          <div class="import-card-desc">AMP cancelled CSV — reconstructs SL/TP</div>
+          <div class="import-card-status" id="ic-cancelled-status" style="color:var(--t3)">No file loaded</div>
+        </div>
+        <div class="import-card" id="ic-pdf">
+          <div style="font-family:var(--mono);font-size:.58rem;color:var(--gold);letter-spacing:1px;margin-bottom:4px">STEP 3</div>
+          <div class="import-card-icon">📄</div>
+          <div class="import-card-name">AMP Statement PDF</div>
+          <div class="import-card-desc">Sets starting balance automatically</div>
+          <div class="import-card-status" id="ic-pdf-status" style="color:var(--t3)">No files loaded</div>
+        </div>
+        <div class="import-card" id="ic-webhook">
+          <div style="font-family:var(--mono);font-size:.58rem;color:var(--green);letter-spacing:1px;margin-bottom:4px">LIVE</div>
+          <div class="import-card-icon">📡</div>
+          <div class="import-card-name">TradingView Webhook</div>
+          <div class="import-card-desc">Live trades from TradingView alerts</div>
+          <div class="import-card-status" id="ic-webhook-status" style="color:var(--t3)">Not connected</div>
+        </div>
+      </div>
+      <div id="import-order-warn" style="display:none;background:rgba(245,183,49,.08);border:1px solid rgba(245,183,49,.25);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:.76rem;color:var(--gold);display:flex;align-items:center;gap:8px">
+        <span style="font-size:1.1rem">⚠️</span>
+        <span id="import-order-warn-text"></span>
+      </div>
+
+      <input type="file" id="fi-smart" accept=".csv,.pdf,.txt,.PDF" style="display:none" onchange="smartImport(event)" multiple>
+
+      <div class="drop-zone" id="drop-zone" ondragover="doDrag(event)" ondragleave="doDragLeave(event)" ondrop="doDrop(event)" onclick="document.getElementById('fi-smart').click()">
+        <div class="drop-icon">📂</div>
+        <h3>Drop All 3 Files At Once</h3>
+        <p>Select filled CSV + cancelled CSV + AMP PDF together — auto-sorted instantly</p>
+        <div style="margin-top:10px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
+          <span class="tag" style="font-size:.6rem">1️⃣ filled-*.csv → Trades</span>
+          <span class="tag" style="font-size:.6rem">2️⃣ cancelled-*.csv → SL/TP</span>
+          <span class="tag" style="font-size:.6rem">3️⃣ *.pdf → Balance</span>
+        </div>
+      </div>
+
+      <div id="import-route-log" style="display:none;margin-top:10px">
+        <div class="cc" style="border-color:rgba(0,240,192,.2)">
+          <div class="cc-title">FILE ROUTING</div>
+          <div id="import-route-list" style="font-size:.72rem;font-family:var(--mono)"></div>
+        </div>
+      </div>
+
+      <div class="alert-box">
+        <strong>AMP Import — Drop all 3 files at once:</strong>
+        <div style="margin-top:8px">
+          <div class="step"><div class="step-n">1</div><div class="step-t">In AMP → Order History → download <strong>Filled Orders</strong> CSV</div></div>
+          <div class="step"><div class="step-n">2</div><div class="step-t">In AMP → Order History → download <strong>Cancelled Orders</strong> CSV (reconstructs your SL/TP levels)</div></div>
+          <div class="step"><div class="step-n">3</div><div class="step-t">In AMP → Daily Statements → download your latest <strong>PDF statement</strong> (sets starting balance automatically)</div></div>
+          <div class="step"><div class="step-n" style="background:linear-gradient(135deg,var(--accent),var(--gold))">✓</div><div class="step-t"><strong>Select all 3 files together</strong> and drop here — order doesn't matter, everything auto-computes</div></div>
+        </div>
+      </div>
+
+      <div id="import-preview" style="display:none">
+        <div class="cc">
+          <div class="cc-title">IMPORT LOG <span style="font-size:.65rem;color:var(--green);text-transform:none">Auto-imported ✓</span></div>
+          <div style="overflow-x:auto"><table><thead><tr id="prev-head"></tr></thead><tbody id="prev-body"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- AMP STATEMENTS SUMMARY -->
+      <div id="amp-statements-panel" style="display:none;margin-top:16px">
+        <div class="cc">
+          <div class="cc-title">AMP STATEMENTS <span id="amp-stmt-count"></span></div>
+          <div id="amp-statements-list" style="max-height:300px;overflow-y:auto"></div>
+        </div>
+      </div>
+
+      <!-- IMPORT HISTORY LOG -->
+      <div class="cc" style="margin-top:16px">
+        <div class="cc-title">IMPORT HISTORY <span id="import-log-count" style="font-size:.68rem;color:var(--t2);text-transform:none;letter-spacing:0"></span></div>
+        <div id="import-log-list">
+          <p style="font-size:.72rem;color:var(--t3);padding:8px 0">No imports yet.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ SETTINGS ═══ -->
+    <div class="view" id="view-settings">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="cc">
+          <div class="cc-title">FEE RATES PER SYMBOL</div>
+          <p style="font-size:.74rem;color:var(--t3);margin-bottom:12px;line-height:1.5">Set your all-in fee per contract per side. Based on your AMP PDF: MNQ total = $0.90/side.</p>
+          <div id="fee-settings"></div>
+        <div class="fg" style="margin-top:12px">
+          <label>Account Holder Name</label>
+          <input id="set-name" placeholder="Auto-detected from AMP PDF" oninput="S.accountName=this.value.trim();save();updateSidebar();">
+        </div>
+        <div class="fg" style="margin-top:12px">
+          <label>Starting Account Balance ($)</label>
+          <input id="set-balance" type="number" step="0.01" placeholder="e.g. 223.00" oninput="S.startingBalance=parseFloat(this.value)||0;save();renderDash();updateSidebar();">
+          <div style="font-size:.65rem;color:var(--t3);margin-top:2px">Your account balance BEFORE your first trade. Current balance = Starting Balance + Net P&L. Based on your AMP account, enter <strong style="color:var(--accent)">223.00</strong>.</div>
+        </div>
+
+          <button class="btn btn-accent btn-sm" style="margin-top:12px;font-family:var(--body)" onclick="saveFees()">Save Fee Rates</button>
+        </div>
+        <div class="cc">
+          <div class="cc-title">AMP EXTRACTED FEES</div>
+          <div id="amp-fees-display">
+            <p style="font-size:.74rem;color:var(--t3)">Import an AMP PDF statement to see your exact fee breakdown here.</p>
+          </div>
+        </div>
+        <!-- Change 23: Trading Discipline Rules -->
+        <div class="cc" style="grid-column:1/-1">
+          <div class="cc-title">TRADING DISCIPLINE RULES</div>
+          <p style="font-size:.74rem;color:var(--t3);margin-bottom:12px;line-height:1.5">Set your trading rules. Violations trigger the nuclear alarm.</p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px">
+            <div class="fg"><label>Max Trades Per Day</label><input type="number" id="rule-max-trades" min="1" max="20" value="3" oninput="S.rules.maxTradesPerDay=parseInt(this.value)||3;save();"></div>
+            <div class="fg"><label>Max Contracts Per Trade</label><input type="number" id="rule-max-contracts" min="1" max="50" value="1" oninput="S.rules.maxContractsPerTrade=parseInt(this.value)||1;save();"></div>
+            <div class="fg"><label>Max Daily Loss ($)</label><input type="number" id="rule-max-loss" min="1" step="1" value="50" oninput="S.rules.maxDailyLoss=parseFloat(this.value)||50;save();"></div>
+            <div class="fg"><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="rule-alarm-enabled" checked onchange="S.rules.alarmEnabled=this.checked;save();"> Enable Alarm</label></div>
+          </div>
+          <div id="violation-history" style="margin-top:12px"></div>
+        </div>
+        <!-- V2.1: Live Market Data -->
+        <div class="cc" style="grid-column:1/-1">
+          <div class="cc-title">LIVE MARKET DATA (OPTIONAL)</div>
+          <p style="font-size:.74rem;color:var(--t3);margin-bottom:8px;line-height:1.5">WebSocket URL for real-time NQ price. Leave blank to use procedural charts.</p>
+          <div class="fg">
+            <label>WebSocket URL</label>
+            <input id="set-live-url" placeholder="wss://your-data-feed.com/nq" oninput="S.liveDataUrl=this.value.trim();save();">
+          </div>
+          <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="_tryLiveData()">Test Connection</button>
+          <span id="live-status" style="font-size:.68rem;color:var(--t3);margin-left:8px"></span>
+        </div>
+        <div class="cc" style="grid-column:1/-1">
+          <div class="cc-title">TRADINGVIEW WEBHOOK IMPORT</div>
+          <p style="font-size:.74rem;color:var(--t3);margin-bottom:8px;line-height:1.5">Run <code style="background:var(--s2);padding:2px 6px;border-radius:4px;font-size:.7rem">bash start-webhook.sh</code> to start the webhook server + ngrok tunnel.</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+            <div class="fg">
+              <label>Webhook Server URL</label>
+              <input id="set-webhook-url" placeholder="http://localhost:5050" oninput="S.webhookUrl=this.value.trim();save();">
+            </div>
+            <div class="fg" style="display:flex;align-items:center">
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="set-webhook-auto" onchange="webhookToggleAutoImport(this.checked);"> Auto-import every 30s</label>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <button class="btn btn-ghost btn-sm" onclick="webhookTestConnection()">Test Connection</button>
+            <button class="btn btn-ghost btn-sm" onclick="webhookPoll()">Import Now</button>
+            <span id="webhook-status" style="font-size:.68rem;color:var(--t3)"></span>
+          </div>
+          <div style="font-size:.68rem;color:var(--t3);font-family:var(--mono);line-height:1.6">Setup: pip3 install flask &rarr; brew install ngrok &rarr; bash start-webhook.sh &rarr; copy ngrok URL into TradingView alert</div>
+        </div>
+        <div class="cc" style="grid-column:1/-1">
+          <div class="cc-title">DATA MANAGEMENT</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-ghost btn-sm" onclick="exportAllCSV()">Export All Data (CSV)</button>
+            <button class="btn btn-ghost btn-sm" onclick="exportJSON()">Backup (JSON)</button>
+            <button class="btn btn-ghost btn-sm" onclick="importJSON()">Restore from Backup</button>
+            <button class="btn btn-red btn-sm" onclick="clearAll(event)">Clear All Data</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- HELP VIEW -->
+    <div class="view" id="view-help"></div>
+  </div><!-- .content -->
+</div><!-- .main -->
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- ADD TRADE MODAL -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="overlay" id="trade-overlay">
+  <div class="modal" style="max-width:720px">
+    <div class="modal-title" id="trade-modal-title">Add Trade</div>
+
+    <div class="msection">
+      <div class="msection-title">Trade Details</div>
+      <div class="fgrid fg3" style="margin-bottom:10px">
+        <div class="fg"><label>Date</label><input type="date" id="f-date"></div>
+        <div class="fg"><label>Time (ET)</label><input type="time" id="f-time"></div>
+        <div class="fg"><label>Symbol</label>
+          <select id="f-sym">
+            <option>MNQ</option><option>MES</option><option>NQ</option><option>ES</option>
+            <option>CL</option><option>GC</option><option value="other">Other</option>
+          </select>
+        </div>
+        <div class="fg"><label>Side</label>
+          <select id="f-side"><option>Long</option><option>Short</option></select>
+        </div>
+        <div class="fg"><label>Quantity (contracts)</label><input type="number" id="f-qty" min="1" value="1"></div>
+        <div class="fg"><label>Killzone</label>
+          <select id="f-kz">
+            <option value="">— Select —</option>
+            <option>London (2–5am ET)</option>
+            <option>NY AM (8:30–11am ET)</option>
+            <option>NY Lunch (11am–1pm ET)</option>
+            <option>NY PM (1:30–4pm ET)</option>
+            <option>Macro Window</option>
+            <option>News Event</option>
+            <option>Outside Killzone</option>
+          </select>
+        </div>
+      </div>
+      <div class="fgrid" style="margin-bottom:0">
+        <div class="fg"><label>Entry Price</label><input type="number" id="f-entry" step="0.01"></div>
+        <div class="fg"><label>Exit Price</label><input type="number" id="f-exit" step="0.01"></div>
+        <div class="fg"><label>Est. SL Price</label><input type="number" id="f-sl" step="0.01" placeholder="From cancelled orders"></div>
+        <div class="fg"><label>Est. TP Price</label><input type="number" id="f-tp" step="0.01" placeholder="From cancelled orders"></div>
+        <div class="fg"><label>Gross P&L ($)</label><input type="number" id="f-pnl" step="0.01"></div>
+        <div class="fg"><label>Total Fees ($)</label><input type="number" id="f-fees" step="0.01" value="0" id="f-fees" placeholder="Auto from AMP PDF"></div>
+      </div>
+      <div id="sltp-info" style="display:none"></div>
+    </div>
+
+    <div class="msection">
+      <div class="msection-title">ICT Setup Tags</div>
+      <div class="tinput" id="tag-wrap" onclick="this.querySelector('input').focus()">
+        <input type="text" id="tag-input" placeholder="Type or pick below…" oninput="filterTags()" onkeydown="tagKey(event)">
+      </div>
+      <div class="tag-suggestions show" id="tag-sug"></div>
+    </div>
+
+    <div class="msection">
+      <div class="msection-title">ICT Pre-Trade Checklist</div>
+      <div class="ckl" id="checklist"></div>
+    </div>
+
+    <div class="msection">
+      <div class="msection-title">Psychology</div>
+      <div class="fgrid" style="margin-bottom:10px">
+        <div class="fg full">
+          <label>Emotional State</label>
+          <div class="emo-grid" id="emo-grid">
+            <div class="emo" onclick="toggleEmo(this)">😌 Calm</div>
+            <div class="emo" onclick="toggleEmo(this)">🎯 Focused</div>
+            <div class="emo" onclick="toggleEmo(this)">💪 Disciplined</div>
+            <div class="emo" onclick="toggleEmo(this)">😎 Confident</div>
+            <div class="emo" onclick="toggleEmo(this)">😤 Frustrated</div>
+            <div class="emo" onclick="toggleEmo(this)">😰 Anxious</div>
+            <div class="emo" onclick="toggleEmo(this)">😴 Tired</div>
+            <div class="emo" onclick="toggleEmo(this)">🤑 FOMO</div>
+            <div class="emo" onclick="toggleEmo(this)">😡 Revenge</div>
+            <div class="emo" onclick="toggleEmo(this)">🧘 Patient</div>
+          </div>
+        </div>
+      </div>
+      <div class="fg full" style="margin-bottom:10px">
+        <label>Mistakes Made</label>
+        <div class="mistake-grid" id="mistake-grid">
+          <div class="mk" onclick="toggleMk(this)">Revenge Trade</div>
+          <div class="mk" onclick="toggleMk(this)">Moved SL</div>
+          <div class="mk" onclick="toggleMk(this)">Overtrading</div>
+          <div class="mk" onclick="toggleMk(this)">Early Exit</div>
+          <div class="mk" onclick="toggleMk(this)">Hesitation</div>
+          <div class="mk" onclick="toggleMk(this)">Off-Plan Entry</div>
+          <div class="mk" onclick="toggleMk(this)">Sized Too Big</div>
+          <div class="mk" onclick="toggleMk(this)">Chased Move</div>
+        </div>
+      </div>
+      <div class="fg full" style="margin-bottom:10px">
+        <label>Execution Rating</label>
+        <div class="stars" id="star-row">
+          <span class="star" onclick="setStar(1)">★</span>
+          <span class="star" onclick="setStar(2)">★</span>
+          <span class="star" onclick="setStar(3)">★</span>
+          <span class="star" onclick="setStar(4)">★</span>
+          <span class="star" onclick="setStar(5)">★</span>
+        </div>
+      </div>
+      <div class="fg full" style="margin-bottom:10px">
+        <label>HTF Bias</label>
+        <select id="f-bias"><option value="">— Select —</option><option>Bullish</option><option>Bearish</option><option>Neutral</option></select>
+      </div>
+    </div>
+
+    <div class="msection">
+      <div class="msection-title">Notes & Charts</div>
+      <div class="fgrid">
+        <div class="fg full"><label>Trade Notes / Lesson Learned</label>
+          <textarea id="f-notes" placeholder="What happened? Did price respect the OB? Was there a FVG fill? What would you do differently?"></textarea>
+        </div>
+        <div class="fg"><label>TradingView Chart Link</label><input type="url" id="f-chart-url" placeholder="https://www.tradingview.com/x/..."></div>
+        <div class="fg"><label>Screenshot Upload</label><input type="file" id="f-chart-img" accept="image/*" onchange="previewImg(event)"></div>
+        <div class="fg full" id="img-preview-wrap" style="display:none">
+          <a id="img-preview-link" href="#" target="_blank" title="Click to open full size" style="display:block;position:relative">
+            <img id="img-preview" style="max-width:100%;max-height:200px;border-radius:7px;border:1px solid var(--b2);cursor:pointer;display:block" src="">
+            <span style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.6);color:var(--accent);font-family:var(--mono);font-size:.58rem;padding:2px 7px;border-radius:4px;pointer-events:none">↗ open</span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="mfooter">
+      <button class="btn btn-ghost" onclick="closeModal('trade-overlay')">Cancel</button>
+      <button class="btn btn-red btn-sm" id="del-btn" style="display:none" onclick="deleteTrade()">Delete Trade</button>
+      <button class="btn btn-accent" onclick="saveTrade()">Save Trade</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- JOURNAL MODAL -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="overlay" id="journal-overlay">
+  <div class="modal">
+    <div class="modal-title">Daily Journal</div>
+    <div class="msection">
+      <div class="msection-title">Session Info</div>
+      <div class="fgrid">
+        <div class="fg"><label>Date</label><input type="date" id="j-date"></div>
+        <div class="fg"><label>HTF Market Bias</label>
+          <select id="j-bias"><option value="">— Select —</option><option>Bullish</option><option>Bearish</option><option>Neutral</option><option>Mixed / Range</option></select>
+        </div>
+      </div>
+    </div>
+    <div class="msection">
+      <div class="msection-title">Pre-Market Plan</div>
+      <div class="fg full">
+        <textarea id="j-pre" style="min-height:80px" placeholder="Key levels to watch, liquidity pools, expected price delivery, news events, your edge today…"></textarea>
+      </div>
+    </div>
+    <div class="msection">
+      <div class="msection-title">Post-Session Review</div>
+      <div class="fg full" style="margin-bottom:10px">
+        <textarea id="j-post" style="min-height:80px" placeholder="What happened vs your plan? Did price deliver as expected? What did you learn?"></textarea>
+      </div>
+    </div>
+    <div class="msection">
+      <div class="msection-title">Mental & Physical State</div>
+      <div class="fgrid">
+        <div class="fg"><label>Hours Slept</label><input type="number" id="j-sleep" min="0" max="12" step=".5" placeholder="7.5"></div>
+        <div class="fg"><label>Energy Level (1–10)</label><input type="number" id="j-energy" min="1" max="10" placeholder="8"></div>
+        <div class="fg"><label>Coffee before 9:30am?</label>
+          <select id="j-coffee"><option value="">—</option><option value="yes">Yes ☕</option><option value="no">No</option></select>
+        </div>
+        <div class="fg"><label>Confidence Level (1–10)</label><input type="number" id="j-confidence" min="1" max="10" placeholder="7"></div>
+        <div class="fg full"><label>Mental / Emotional Notes</label>
+          <textarea id="j-mental" placeholder="How are you feeling? Any life stress? Distractions? Mental clarity?"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="msection">
+      <div class="msection-title">Improvement Focus</div>
+      <div class="fg full">
+        <textarea id="j-improve" placeholder="One specific thing to work on tomorrow…"></textarea>
+      </div>
+    </div>
+    <div class="msection">
+      <div class="msection-title">Charts</div>
+      <div class="fgrid">
+        <div class="fg"><label>TradingView Chart Link</label><input type="url" id="j-chart-url" placeholder="https://..."></div>
+        <div class="fg"><label>Screenshot</label><input type="file" id="j-img" accept="image/*" onchange="previewJImg(event)"></div>
+        <div class="fg full" id="j-img-preview-wrap" style="display:none">
+          <a id="j-img-preview-link" href="#" target="_blank" title="Click to open full size" style="display:block;position:relative">
+            <img id="j-img-preview" style="max-width:100%;max-height:180px;border-radius:7px;border:1px solid var(--b2);cursor:pointer;display:block">
+            <span style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.6);color:var(--accent);font-family:var(--mono);font-size:.58rem;padding:2px 7px;border-radius:4px;pointer-events:none">↗ open</span>
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="mfooter">
+      <button class="btn btn-ghost" onclick="closeModal('journal-overlay')">Cancel</button>
+      <button class="btn btn-accent" onclick="saveJournal()">Save Entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- PRE-SESSION POPUP -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="session-overlay" id="pre-sesh-overlay">
+  <div class="session-modal">
+    <div class="sesh-title" id="sesh-greeting">Good Morning 👋</div>
+    <div class="sesh-sub" id="sesh-time-label">PRE-SESSION CHECK-IN</div>
+
+    <div class="msection">
+      <div class="msection-title">Physical State</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="fg">
+          <label>Hours slept last night</label>
+          <div class="slider-row">
+            <input type="range" id="ps-sleep" min="0" max="12" step=".5" value="7" oninput="document.getElementById('ps-sleep-val').textContent=this.value">
+            <span class="slider-val" id="ps-sleep-val">7</span>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Energy level right now (1–10)</label>
+          <div class="slider-row">
+            <input type="range" id="ps-energy" min="1" max="10" value="7" oninput="document.getElementById('ps-energy-val').textContent=this.value">
+            <span class="slider-val" id="ps-energy-val">7</span>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Confidence level (1–10)</label>
+          <div class="slider-row">
+            <input type="range" id="ps-conf" min="1" max="10" value="7" oninput="document.getElementById('ps-conf-val').textContent=this.value">
+            <span class="slider-val" id="ps-conf-val">7</span>
+          </div>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label">☕ Coffee before 9:30am?</span>
+          <button class="toggle" id="ps-coffee" onclick="this.classList.toggle('on')"></button>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label">📰 Checked economic calendar?</span>
+          <button class="toggle" id="ps-cal" onclick="this.classList.toggle('on')"></button>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label">📊 Reviewed HTF bias (Daily/4H)?</span>
+          <button class="toggle" id="ps-htf" onclick="this.classList.toggle('on')"></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="msection">
+      <div class="msection-title">Today's Plan</div>
+      <div class="sesh-fgrid">
+        <div class="fg">
+          <label>HTF Bias</label>
+          <select id="ps-bias"><option value="">—</option><option>Bullish</option><option>Bearish</option><option>Neutral</option></select>
+        </div>
+        <div class="fg">
+          <label>Primary Instrument</label>
+          <select id="ps-sym"><option>MNQ</option><option>MES</option><option>NQ</option><option>ES</option></select>
+        </div>
+      </div>
+      <div class="fg" style="margin-top:10px">
+        <label>Pre-Market Notes / Key Levels</label>
+        <textarea id="ps-notes" placeholder="Key liquidity levels, FVGs, OBs to watch, expected Judas swing direction…" style="min-height:70px"></textarea>
+      </div>
+    </div>
+
+    <div class="mfooter">
+      <button class="btn btn-ghost" onclick="closeSession()">Skip</button>
+      <button class="btn btn-accent" onclick="savePreSession()">Start Trading ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- POST-TRADE POPUP -->
+<div class="session-overlay" id="post-trade-overlay">
+  <div class="session-modal">
+    <div class="sesh-title">Trade Closed 📊</div>
+    <div class="sesh-sub">POST-TRADE DEBRIEF</div>
+
+    <div class="msection">
+      <div class="msection-title">Quick Entry</div>
+      <div class="sesh-fgrid">
+        <div class="fg"><label>Symbol</label>
+          <select id="pt-sym"><option>MNQ</option><option>MES</option><option>NQ</option><option>ES</option></select>
+        </div>
+        <div class="fg"><label>Result</label>
+          <select id="pt-result"><option value="win">Win ✅</option><option value="loss">Loss ❌</option><option value="be">Breakeven ➖</option></select>
+        </div>
+        <div class="fg"><label>Net P&L ($)</label><input type="number" id="pt-pnl" step="0.01"></div>
+        <div class="fg"><label>Setup Used</label>
+          <select id="pt-setup">
+            <option value="">— Select —</option>
+            <option>FVG</option><option>Order Block</option><option>Breaker Block</option>
+            <option>Liquidity Sweep</option><option>OTE</option><option>Turtle Soup</option>
+            <option>Judas Swing</option><option>MSS</option><option>Silver Bullet</option>
+            <option>1st Presented FVG</option><option>ORG</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="msection">
+      <div class="msection-title">ICT Checklist — This Trade</div>
+      <div class="ckl" id="pt-checklist"></div>
+    </div>
+
+    <div class="msection">
+      <div class="msection-title">Psychology</div>
+      <div class="emo-grid" id="pt-emo">
+        <div class="emo" onclick="toggleEmo(this)">😌 Calm</div>
+        <div class="emo" onclick="toggleEmo(this)">🎯 Focused</div>
+        <div class="emo" onclick="toggleEmo(this)">💪 Disciplined</div>
+        <div class="emo" onclick="toggleEmo(this)">😤 Frustrated</div>
+        <div class="emo" onclick="toggleEmo(this)">😰 Anxious</div>
+        <div class="emo" onclick="toggleEmo(this)">🤑 FOMO</div>
+        <div class="emo" onclick="toggleEmo(this)">😡 Revenge</div>
+      </div>
+      <div class="fg" style="margin-top:10px">
+        <label>Mistakes (if any)</label>
+        <div class="mistake-grid" id="pt-mistakes">
+          <div class="mk" onclick="toggleMk(this)">Revenge Trade</div>
+          <div class="mk" onclick="toggleMk(this)">Moved SL</div>
+          <div class="mk" onclick="toggleMk(this)">Early Exit</div>
+          <div class="mk" onclick="toggleMk(this)">Off-Plan</div>
+          <div class="mk" onclick="toggleMk(this)">Chased</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="msection">
+      <div class="msection-title">Quick Note</div>
+      <textarea id="pt-notes" placeholder="What happened? Did price respect the level? Any lesson?" style="min-height:55px"></textarea>
+      <div class="fg" style="margin-top:8px">
+        <label>Chart Link (optional)</label>
+        <input type="url" id="pt-chart" placeholder="https://www.tradingview.com/x/...">
+      </div>
+    </div>
+
+    <div class="mfooter">
+      <button class="btn btn-ghost" onclick="closeSession('post-trade-overlay')">Skip</button>
+      <button class="btn btn-accent" onclick="savePostTrade()">Log Trade ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+
+<!-- JS Modules (load order matters — globals, no ES modules) -->
+<script src="js/core/state.js"></script>
+<script src="js/core/helpers.js"></script>
+<script src="js/features/dashboard.js"></script>
+<script src="js/core/nav.js"></script>
+<script src="js/features/calendar.js"></script>
+<script src="js/features/trades.js"></script>
+<script src="js/features/tags.js"></script>
+<script src="js/features/journal.js"></script>
+<script src="js/features/session.js"></script>
+<script src="js/features/analytics.js"></script>
+<script src="js/features/ict-analytics.js"></script>
+<script src="js/features/weekly.js"></script>
+<script src="js/import/csv-parser.js"></script>
+<script src="js/import/fill-pairing.js"></script>
+<script src="js/import/sltp-reconstruct.js"></script>
+<script src="js/import/import-workflow.js"></script>
+<script src="js/import/pdf-import.js"></script>
+<script src="js/import/webhooks.js"></script>
+<script src="js/settings/settings.js"></script>
+<script src="js/help/help.js"></script>
+<script src="js/help/tour.js"></script>
+<script src="js/cockpit/tex-data.js"></script>
+<script src="js/cockpit/textures.js"></script>
+<script src="js/cockpit/scene-setup.js"></script>
+<script src="js/cockpit/charts.js"></script>
+<script src="js/cockpit/scene-objects.js"></script>
+<script src="js/cockpit/rules-alarm.js"></script>
+<script src="js/cockpit/space.js"></script>
+<script src="js/cockpit/cockpit-frame.js"></script>
+<script src="js/cockpit/chips-init.js"></script>
+<script src="js/cockpit/chips-materials.js"></script>
+<script src="js/cockpit/chips-render.js"></script>
+<script src="js/cockpit/audio.js"></script>
+<script src="js/features/render-chips.js"></script>
+<script src="js/effects/share.js"></script>
+<script src="js/effects/nuke.js"></script>
+<script src="js/effects/market-bells.js"></script>
+<script src="js/effects/weapons.js"></script>
+<script src="js/effects/live-symbols.js"></script>
+<script src="js/init.js"></script>
+
+
+<!-- FLOATING HELP BUTTON -->
+<button class="help-fab" onclick="go('help')" title="Help & Tutorial">?</button>
+
+<!-- Change 45: Session Summary Overlay -->
+<div id="session-summary-overlay" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);align-items:center;justify-content:center">
+  <div style="background:var(--s2);border:1px solid var(--b2);border-radius:12px;padding:24px;max-width:360px;width:90%">
+    <div style="font-family:var(--display);font-size:1.2rem;letter-spacing:1px;text-align:center;margin-bottom:12px;color:var(--t1)">TODAY'S SESSION</div>
+    <div id="session-summary-body"></div>
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:16px">
+      <button class="btn btn-ghost" onclick="document.getElementById('session-summary-overlay').style.display='none'">Dismiss</button>
+      <button class="btn btn-accent" onclick="document.getElementById('session-summary-overlay').style.display='none';go('journal')">Open Journal</button>
+    </div>
+  </div>
+</div>
+
+<!-- Change 22: KEY LEVELS MODAL -->
+<div class="overlay" id="keylevel-overlay" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);align-items:center;justify-content:center">
+  <div style="background:var(--s2);border:1px solid var(--b2);border-radius:12px;padding:24px;max-width:420px;width:90%;max-height:85vh;overflow-y:auto">
+    <div style="font-family:var(--display);font-size:1.4rem;letter-spacing:1px;margin-bottom:16px;color:var(--t1)">ICT Key Levels</div>
+    <div class="msection" style="margin-bottom:12px">
+      <div style="font-family:var(--mono);font-size:.7rem;color:var(--t3);letter-spacing:1px;margin-bottom:6px">OPENING RANGE GAP (ORG)</div>
+      <div style="display:flex;gap:8px"><input type="number" id="kl-org-h" placeholder="High" step="0.25" style="flex:1;background:var(--s1);border:1px solid var(--b1);border-radius:6px;padding:8px;color:var(--t1);font-family:var(--mono);font-size:.8rem"><input type="number" id="kl-org-l" placeholder="Low" step="0.25" style="flex:1;background:var(--s1);border:1px solid var(--b1);border-radius:6px;padding:8px;color:var(--t1);font-family:var(--mono);font-size:.8rem"></div>
+    </div>
+    <div class="msection" style="margin-bottom:12px">
+      <div style="font-family:var(--mono);font-size:.7rem;color:var(--t3);letter-spacing:1px;margin-bottom:6px">NEW DAY OPENING GAP (NDOG)</div>
+      <div style="display:flex;gap:8px"><input type="number" id="kl-ndog-h" placeholder="High" step="0.25" style="flex:1;background:var(--s1);border:1px solid var(--b1);border-radius:6px;padding:8px;color:var(--t1);font-family:var(--mono);font-size:.8rem"><input type="number" id="kl-ndog-l" placeholder="Low" step="0.25" style="flex:1;background:var(--s1);border:1px solid var(--b1);border-radius:6px;padding:8px;color:var(--t1);font-family:var(--mono);font-size:.8rem"></div>
+    </div>
+    <div class="msection" style="margin-bottom:12px">
+      <div style="font-family:var(--mono);font-size:.7rem;color:var(--t3);letter-spacing:1px;margin-bottom:6px">NEW WEEK OPENING GAP (NWOG)</div>
+      <div style="display:flex;gap:8px"><input type="number" id="kl-nwog-h" placeholder="High" step="0.25" style="flex:1;background:var(--s1);border:1px solid var(--b1);border-radius:6px;padding:8px;color:var(--t1);font-family:var(--mono);font-size:.8rem"><input type="number" id="kl-nwog-l" placeholder="Low" step="0.25" style="flex:1;background:var(--s1);border:1px solid var(--b1);border-radius:6px;padding:8px;color:var(--t1);font-family:var(--mono);font-size:.8rem"></div>
+    </div>
+    <div class="msection" style="margin-bottom:12px">
+      <div style="font-family:var(--mono);font-size:.7rem;color:var(--t3);letter-spacing:1px;margin-bottom:6px">PREVIOUS DAY HIGH/LOW</div>
+      <div style="display:flex;gap:8px"><input type="number" id="kl-pdh" placeholder="PDH" step="0.25" style="flex:1;background:var(--s1);border:1px solid var(--b1);border-radius:6px;padding:8px;color:var(--t1);font-family:var(--mono);font-size:.8rem"><input type="number" id="kl-pdl" placeholder="PDL" step="0.25" style="flex:1;background:var(--s1);border:1px solid var(--b1);border-radius:6px;padding:8px;color:var(--t1);font-family:var(--mono);font-size:.8rem"></div>
+    </div>
+    <div class="msection" style="margin-bottom:12px">
+      <div style="font-family:var(--mono);font-size:.7rem;color:var(--t3);letter-spacing:1px;margin-bottom:6px">PREVIOUS WEEK HIGH/LOW</div>
+      <div style="display:flex;gap:8px"><input type="number" id="kl-pwh" placeholder="PWH" step="0.25" style="flex:1;background:var(--s1);border:1px solid var(--b1);border-radius:6px;padding:8px;color:var(--t1);font-family:var(--mono);font-size:.8rem"><input type="number" id="kl-pwl" placeholder="PWL" step="0.25" style="flex:1;background:var(--s1);border:1px solid var(--b1);border-radius:6px;padding:8px;color:var(--t1);font-family:var(--mono);font-size:.8rem"></div>
+    </div>
+    <div class="msection" style="margin-bottom:16px">
+      <div style="font-family:var(--mono);font-size:.7rem;color:var(--t3);letter-spacing:1px;margin-bottom:6px">CUSTOM LEVELS</div>
+      <textarea id="kl-custom" placeholder="Add any custom key levels..." rows="3" style="width:100%;background:var(--s1);border:1px solid var(--b1);border-radius:6px;padding:8px;color:var(--t1);font-family:var(--mono);font-size:.8rem;resize:vertical"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closeModal('keylevel-overlay')">Cancel</button>
+      <button class="btn btn-accent" onclick="saveKeyLevels()">Save Levels</button>
+    </div>
+  </div>
+</div>
+
+<!-- SELF-DESTRUCT OVERLAY -->
+<div class="nuke-overlay" id="nuke-overlay">
+  <div style="text-align:center">
+    <div class="nuke-label">⚠ ACCOUNT SELF-DESTRUCT SEQUENCE INITIATED ⚠</div>
+    <div class="nuke-countdown" id="nuke-countdown">5</div>
+  </div>
+</div>
+<div class="nuke-emoji" id="nuke-emoji" style="display:none">☢️</div>
+<div class="nuke-flash" id="nuke-flash" style="display:none"></div>
+<div class="nuke-blackout" id="nuke-blackout">
+  <div class="nuke-rip">ACCOUNT LIQUIDATED</div>
+  <div style="color:var(--t3);font-family:var(--mono);font-size:.7rem;margin-top:20px;opacity:0;animation:fadeRip 1s ease forwards;animation-delay:2s;letter-spacing:2px">REVIEW YOUR JOURNAL. DO BETTER.</div>
+  <button class="btn btn-ghost btn-sm" style="margin-top:40px;opacity:0;animation:fadeRip 1s ease forwards;animation-delay:3.5s" onclick="dismissNuke()">Dismiss</button>
+</div>
+
+<!-- TOUR OVERLAY -->
+<div class="tour-overlay" id="tour-overlay" style="display:none">
+  <div class="tour-highlight" id="tour-highlight"></div>
+  <div class="tour-tooltip" id="tour-tooltip">
+    <div class="tour-step-label" id="tour-step-label"></div>
+    <div class="tour-title" id="tour-title"></div>
+    <div class="tour-desc" id="tour-desc"></div>
+    <div class="tour-footer">
+      <div class="tour-dots" id="tour-dots"></div>
+      <div class="tour-btns">
+        <button class="btn btn-ghost btn-sm" onclick="endTour()">Skip</button>
+        <button class="btn btn-accent btn-sm" id="tour-next-btn" onclick="tourNext()">Next →</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- V2.3: Share Modal -->
+<div class="share-modal-overlay" id="share-overlay" onclick="if(event.target===this)closeShareModal()">
+  <div class="share-modal">
+    <div style="font-family:var(--display);font-size:1.1rem;letter-spacing:.5px;margin-bottom:12px;color:var(--t1)">Share Card</div>
+    <img id="share-preview" alt="Share preview">
+    <div class="share-modal-actions">
+      <button class="btn btn-accent" onclick="shareClipboard()">Copy to Clipboard</button>
+      <button class="btn btn-ghost" onclick="shareDownload()">Download</button>
+      <button class="btn btn-ghost" id="share-native-btn" onclick="shareNative()" style="display:none">Share</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
