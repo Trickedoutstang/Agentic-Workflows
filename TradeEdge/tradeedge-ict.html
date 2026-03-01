@@ -355,7 +355,7 @@ textarea{resize:vertical;min-height:60px;line-height:1.5}
 .step-n{width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#000;font-size:.62rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
 .step-t{font-size:.76rem;color:var(--t2);line-height:1.5}
 .step-t strong{color:var(--t1)}
-.import-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px}
+.import-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
 .import-card{background:var(--s2);border:1px solid var(--b1);border-radius:var(--r);padding:16px;text-align:center;cursor:pointer;transition:.15s}
 .import-card:hover{border-color:var(--accent);background:rgba(0,240,192,.04);transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.15)}
 .import-card.has-data{border-color:var(--green)}
@@ -983,6 +983,13 @@ kbd{background:var(--s3);border:1px solid var(--b3);border-radius:4px;padding:2p
           <div class="import-card-desc">Sets starting balance automatically</div>
           <div class="import-card-status" id="ic-pdf-status" style="color:var(--t3)">No files loaded</div>
         </div>
+        <div class="import-card" id="ic-webhook">
+          <div style="font-family:var(--mono);font-size:.58rem;color:var(--green);letter-spacing:1px;margin-bottom:4px">LIVE</div>
+          <div class="import-card-icon">📡</div>
+          <div class="import-card-name">TradingView Webhook</div>
+          <div class="import-card-desc">Live trades from TradingView alerts</div>
+          <div class="import-card-status" id="ic-webhook-status" style="color:var(--t3)">Not connected</div>
+        </div>
       </div>
       <div id="import-order-warn" style="display:none;background:rgba(245,183,49,.08);border:1px solid rgba(245,183,49,.25);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:.76rem;color:var(--gold);display:flex;align-items:center;gap:8px">
         <span style="font-size:1.1rem">⚠️</span>
@@ -1090,6 +1097,25 @@ kbd{background:var(--s3);border:1px solid var(--b3);border-radius:4px;padding:2p
           </div>
           <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="_tryLiveData()">Test Connection</button>
           <span id="live-status" style="font-size:.68rem;color:var(--t3);margin-left:8px"></span>
+        </div>
+        <div class="cc" style="grid-column:1/-1">
+          <div class="cc-title">TRADINGVIEW WEBHOOK IMPORT</div>
+          <p style="font-size:.74rem;color:var(--t3);margin-bottom:8px;line-height:1.5">Run <code style="background:var(--s2);padding:2px 6px;border-radius:4px;font-size:.7rem">bash start-webhook.sh</code> to start the webhook server + ngrok tunnel.</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+            <div class="fg">
+              <label>Webhook Server URL</label>
+              <input id="set-webhook-url" placeholder="http://localhost:5050" oninput="S.webhookUrl=this.value.trim();save();">
+            </div>
+            <div class="fg" style="display:flex;align-items:center">
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="set-webhook-auto" onchange="webhookToggleAutoImport(this.checked);"> Auto-import every 30s</label>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <button class="btn btn-ghost btn-sm" onclick="webhookTestConnection()">Test Connection</button>
+            <button class="btn btn-ghost btn-sm" onclick="webhookPoll()">Import Now</button>
+            <span id="webhook-status" style="font-size:.68rem;color:var(--t3)"></span>
+          </div>
+          <div style="font-size:.68rem;color:var(--t3);font-family:var(--mono);line-height:1.6">Setup: pip3 install flask &rarr; brew install ngrok &rarr; bash start-webhook.sh &rarr; copy ngrok URL into TradingView alert</div>
         </div>
         <div class="cc" style="grid-column:1/-1">
           <div class="cc-title">DATA MANAGEMENT</div>

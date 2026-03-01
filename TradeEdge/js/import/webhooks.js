@@ -71,16 +71,14 @@ function webhookPoll() {
           save();
         }
       }
-      if (_webhookPolling) {
-        _webhookSetStatus('Connected — ' + S.trades.length + ' trades', 'var(--green)');
-      }
+      _webhookSetStatus('Connected — ' + S.trades.length + ' trades', 'var(--green)');
       _webhookCardStatus('Connected', 'var(--green)');
       _webhookInFlight = false;
     })
     .catch(function(err) {
       var msg = err.name === 'AbortError' ? 'Timeout' : 'Server offline';
       var color = err.name === 'AbortError' ? 'var(--gold)' : 'var(--red)';
-      if (_webhookPolling) _webhookSetStatus(msg, color);
+      _webhookSetStatus(msg, color);
       _webhookCardStatus(msg, color);
       _webhookInFlight = false;
     });
