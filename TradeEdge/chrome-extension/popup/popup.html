@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=360">
+  <title>TradeEdge Fill Capture</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <span class="logo">TE</span>
+      <span class="title">FILL CAPTURE</span>
+    </div>
+    <span id="mode-badge" class="badge">DISCOVERY</span>
+  </header>
+
+  <!-- Webhook Status -->
+  <section class="section">
+    <div class="row">
+      <div class="status-row">
+        <span id="status-dot" class="dot dot-red"></span>
+        <span id="status-text" class="status-text">Not connected</span>
+      </div>
+      <button id="btn-test" class="btn btn-sm">Test</button>
+    </div>
+  </section>
+
+  <!-- Account Selector -->
+  <section class="section">
+    <label class="label">Account</label>
+    <select id="sel-account" class="select"></select>
+  </section>
+
+  <!-- Mode Toggle -->
+  <section class="section">
+    <label class="label">Mode</label>
+    <div class="mode-group">
+      <button id="btn-discovery" class="btn mode-btn active" data-mode="discovery">Discovery</button>
+      <button id="btn-capture" class="btn mode-btn" data-mode="capture">Capture</button>
+      <button id="btn-paused" class="btn mode-btn" data-mode="paused">Paused</button>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <section class="section">
+    <div class="stats-row">
+      <div class="stat">
+        <span class="stat-val" id="stat-captured">0</span>
+        <span class="stat-label">Captured</span>
+      </div>
+      <div class="stat">
+        <span class="stat-val" id="stat-sent">0</span>
+        <span class="stat-label">Sent</span>
+      </div>
+      <div class="stat">
+        <span class="stat-val" id="stat-pending">0</span>
+        <span class="stat-label">Pending</span>
+      </div>
+      <div class="stat">
+        <span class="stat-val stat-err" id="stat-error">-</span>
+        <span class="stat-label">Last Error</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Recent Fills -->
+  <section class="section">
+    <label class="label">Recent Fills</label>
+    <div id="fills-list" class="fills-list">
+      <div class="empty">No fills captured yet</div>
+    </div>
+  </section>
+
+  <!-- WS Connections (discovery only) -->
+  <section id="ws-section" class="section" style="display:none;">
+    <div class="row">
+      <label class="label">WS Traffic Log</label>
+      <button id="btn-export" class="btn btn-sm">Export</button>
+    </div>
+    <div id="ws-info" class="ws-info">0 frames logged</div>
+  </section>
+
+  <!-- Settings -->
+  <section class="section">
+    <label class="label">Webhook URL</label>
+    <div class="row">
+      <input id="inp-url" type="text" class="input" placeholder="http://localhost:5050">
+      <button id="btn-save-url" class="btn btn-sm">Save</button>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <button id="btn-clear" class="btn btn-sm btn-danger">Clear Data</button>
+    <span class="version">v1.0.0</span>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>
