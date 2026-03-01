@@ -99,7 +99,33 @@ def webhook():
         print(f"[webhook] Summary received: balance={summary['balance']}")
         return jsonify({"ok": True, "type": "summary"})
 
-    # Trade entry, exit, or complete trade
+    # SL/TP update or order modification — patch most recent matching trade
+    if msg_type in ("update", "bracket", "order_modified"):
+        sym = data.get("symbol", "")
+        sl = data.get("sl")
+        tp = data.get("tp")
+        trades = _load_json(TRADES_FILE)
+        matched = False
+        for t in reversed(trades):
+            if t.get("symbol", "") == sym and not t.get("exit"):
+                if sl is not None:
+                    t["sl"] = sl
+                if tp is not None:
+                    t["tp"] = tp
+                matched = True
+                _save_json(TRADES_FILE, trades)
+                label = []
+                if sl is not None:
+                    label.append(f"SL={sl}")
+                if tp is not None:
+                    label.append(f"TP={tp}")
+                print(f"[webhook] {msg_type}: {sym} updated {', '.join(label)} (id={t['id'][:8]})")
+                break
+        if not matched:
+            print(f"[webhook] {msg_type}: no open trade for {sym} to update")
+        return jsonify({"ok": True, "type": msg_type, "matched": matched})
+
+    # Trade entry, exit, limit order, or complete trade
     trade = {
         "id": str(uuid.uuid4()),
         "type": msg_type,
@@ -113,6 +139,9 @@ def webhook():
         "pnl": data.get("pnl"),
         "fees": data.get("fees"),
         "exitReason": data.get("exitReason", data.get("exit_reason", "")),
+        "account": data.get("account", ""),
+        "orderType": data.get("orderType", ""),
+        "orderId": data.get("orderId", ""),
         "comment": data.get("comment", ""),
         "receivedAt": now,
     }
@@ -125,7 +154,7 @@ def webhook():
     _save_json(TRADES_FILE, trades)
 
     side = trade["action"] or msg_type
-    print(f"[webhook] Trade received: {side} {trade['symbol']} (id={trade['id'][:8]})")
+    print(f"[webhook] {msg_type}: {side} {trade['symbol']} (id={trade['id'][:8]})")
     return jsonify({"ok": True, "id": trade["id"], "type": msg_type})
 
 

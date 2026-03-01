@@ -1,10 +1,10 @@
 // TradeEdge — Settings
 
 function renderSettings(){
-  const syms=['MNQ','MES','NQ','ES','CL','GC'];
+  const syms=['MNQ','MES','NQ','ES','YM','MYM','RTY','M2K','CL','MCL','GC','MGC','SI','SIL','NG','HG','ZB','ZN','ZC','ZS','ZW'];
   document.getElementById('fee-settings').innerHTML=syms.map(s=>`
-    <div class="fg" style="margin-bottom:10px">
-      <label>${s} — Fee per contract per side ($)</label>
+    <div class="fg" style="margin-bottom:10px;display:inline-block;width:48%;margin-right:1%">
+      <label>${s} — Fee/contract/side ($)</label>
       <input type="number" id="fee-${s}" step=".01" value="${S.feeRates[s]||2.25}" placeholder="e.g. 0.90">
     </div>`).join('');
   if(S.ampStatements&&S.ampStatements.length){renderAMPStatements();}
@@ -34,9 +34,9 @@ function renderSettings(){
   }
 }
 function saveFees(){
-  ['MNQ','MES','NQ','ES','CL','GC'].forEach(s=>{
-    const v=parseFloat(document.getElementById('fee-'+s)?.value);
-    if(!isNaN(v))S.feeRates[s]=v;
+  ['MNQ','MES','NQ','ES','YM','MYM','RTY','M2K','CL','MCL','GC','MGC','SI','SIL','NG','HG','ZB','ZN','ZC','ZS','ZW'].forEach(s=>{
+    const el=document.getElementById('fee-'+s);
+    if(el){const v=parseFloat(el.value);if(!isNaN(v))S.feeRates[s]=v;}
   });
   save();toast('Fee rates saved ✓','ok');
 }
@@ -85,7 +85,7 @@ function clearAll(e){
   // Nuclear clear — wipe everything
   S.trades=[];S.journal=[];S.ampStatements=[];S.importLog=[];S.ampFees=null;
   S.accountName='';S.startingBalance=0;S._ampMigrated=true;S._ampMigV2=true;
-  S.feeRates={MNQ:0.90,MES:0.90,NQ:2.25,ES:2.25};
+  S.feeRates={ MNQ:0.90, MES:0.90, NQ:2.25, ES:2.25, YM:2.25, MYM:0.90, RTY:2.25, M2K:0.90, CL:2.25, MCL:0.90, GC:2.25, MGC:0.90, SI:2.25, SIL:0.90, NG:2.25, HG:2.25, ZB:1.52, ZN:1.52, ZC:2.25, ZS:2.25, ZW:2.25 };
   S.pendingCancelled=[];
   S.webhookSeenIds=[];S.webhookLastFetch=null;
   _lastChipBalance=-1; // Force 3D chip re-render

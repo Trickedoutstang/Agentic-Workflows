@@ -61,15 +61,19 @@ function pdt(str){
   return{date:dp,time:tp};
 }
 
-// Normalize symbol: F.US.MNQH26→MNQ, CME_MINI:MESH2025→MES, NQ1!→NQ
+// Normalize symbol: F.US.MNQH26→MNQ, CME_MINI:MESH2025→MES, NQ1!→NQ, 6EH26→6E
 function nsym(s){
   if(!s)return'';s=s.toUpperCase().trim();
   // Strip exchange prefixes: "CME_MINI:", "F.US.", "COMEX:", etc.
   s=s.replace(/^[A-Z_]+:/,'');
   s=s.replace(/^F\.[A-Z]+\./,''); // F.US.MNQH26 → MNQH26
   s=s.replace(/^[A-Z]+\./,'');    // CME.ESH26 → ESH26
-  const m=s.match(/^([A-Z]{2,4}?)[FGHJKMNQUVXZ]\d{2,4}$/);
+  // Standard symbols: MNQH26→MNQ, ESM2025→ES, CLZ24→CL, M2KZ26→M2K, E6H26→E6
+  const m=s.match(/^([A-Z][A-Z0-9]{1,3}?)[FGHJKMNQUVXZ]\d{2,4}$/);
   if(m)return m[1];
+  // Digit-prefixed currency symbols: 6EH26→6E, 6BM2025→6B, 6JZ24→6J
+  const mc=s.match(/^(\d[A-Z])[FGHJKMNQUVXZ]\d{2,4}$/);
+  if(mc)return mc[1];
   return s.replace(/\d*!$/,'');
 }
 
@@ -88,9 +92,63 @@ function dkz(time){
 
 function isbuy(v){if(!v)return true;const l=v.toLowerCase();return l.includes('buy')||l==='long'||l==='b';}
 
-// Tick value per point for P&L calculation
+// Dollar-per-point multiplier for P&L calculation
+// Formula: (priceA - priceB) * getTickValue(sym) * qty = dollar P&L
 function getTickValue(sym){
-  return{MNQ:2,MES:5,NQ:20,ES:50,CL:1000,MCL:100,GC:100,MGC:10,YM:5,MYM:0.5,RTY:50,M2K:5}[sym]||1;
+  var tv={
+    // ── Equity Index ────────────────────────────────
+    MNQ:2, NQ:20,             // Nasdaq-100  (tick 0.25, $0.50/$5)
+    MES:5, ES:50,             // S&P 500     (tick 0.25, $1.25/$12.50)
+    MYM:0.5, YM:5,            // Dow Jones   (tick 1, $0.50/$5)
+    M2K:5, RTY:50,            // Russell 2000 (tick 0.10, $0.50/$5)
+    EMD:100,                  // S&P MidCap 400
+    NKD:5,                    // Nikkei 225 (USD)
+    // ── Energy ──────────────────────────────────────
+    CL:1000, MCL:100,         // Crude Oil    (tick 0.01, $10/$1)
+    QM:500,                   // E-mini Crude (tick 0.025, $12.50)
+    NG:10000,                 // Natural Gas  (tick 0.001, $10)
+    QG:2500,                  // E-mini Nat Gas (tick 0.005, $12.50)
+    RB:42000,                 // RBOB Gasoline (tick 0.0001, $4.20)
+    HO:42000,                 // Heating Oil  (tick 0.0001, $4.20)
+    // ── Metals ──────────────────────────────────────
+    GC:100, MGC:10,           // Gold         (tick 0.10, $10/$1)
+    SI:5000, SIL:1000,        // Silver       (tick 0.005, $25/$5)
+    HG:25000,                 // Copper       (tick 0.0005, $12.50)
+    PL:50,                    // Platinum     (tick 0.10, $5)
+    PA:100,                   // Palladium    (tick 0.10, $10)
+    // ── Treasury / Interest Rate ────────────────────
+    ZB:1000, UB:1000,         // 30-Year Bond / Ultra Bond
+    ZN:1000, TN:1000,         // 10-Year Note / Ultra 10-Year
+    ZF:1000,                  // 5-Year Note
+    ZT:2000,                  // 2-Year Note
+    // ── Agriculture ─────────────────────────────────
+    ZC:50, ZS:50, ZW:50,      // Corn, Soybeans, Wheat (cents/bu)
+    ZM:100,                   // Soybean Meal ($/ton)
+    ZL:600,                   // Soybean Oil  (cents/lb)
+    CT:500,                   // Cotton       (cents/lb)
+    KC:375,                   // Coffee       (cents/lb)
+    SB:1120,                  // Sugar        (cents/lb)
+    CC:10,                    // Cocoa        ($/ton)
+    // ── Livestock ───────────────────────────────────
+    HE:400,                   // Lean Hogs    (cents/lb)
+    LE:400,                   // Live Cattle  (cents/lb)
+    GF:500,                   // Feeder Cattle (cents/lb)
+    // ── Currency ────────────────────────────────────
+    '6E':125000,              // Euro FX
+    '6B':62500,               // British Pound
+    '6J':12500000,            // Japanese Yen
+    '6A':100000,              // Australian Dollar
+    '6C':100000,              // Canadian Dollar
+    '6S':125000,              // Swiss Franc
+    '6N':100000,              // New Zealand Dollar
+    '6M':500000,              // Mexican Peso
+    E6:125000,E7:125000,      // Alt Euro codes (CQG/Rithmic)
+    J6:12500000,              // Alt Yen code
+    // ── Crypto ──────────────────────────────────────
+    BTC:5, MBT:0.1,           // Bitcoin / Micro Bitcoin
+    ETH:50, MET:0.1           // Ether / Micro Ether
+  };
+  return tv[sym]||1;
 }
 
 // Map a single row to a complete trade (account history / generic with P&L)

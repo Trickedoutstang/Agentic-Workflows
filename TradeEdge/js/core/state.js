@@ -7,7 +7,7 @@ let S = {
   ampFees: null,
   ampStatements: [],
   importLog: [],
-  feeRates: { MNQ:0.90, MES:0.90, NQ:2.25, ES:2.25 },
+  feeRates: { MNQ:0.90, MES:0.90, NQ:2.25, ES:2.25, YM:2.25, MYM:0.90, RTY:2.25, M2K:0.90, CL:2.25, MCL:0.90, GC:2.25, MGC:0.90, SI:2.25, SIL:0.90, NG:2.25, HG:2.25, ZB:1.52, ZN:1.52, ZC:2.25, ZS:2.25, ZW:2.25 },
   pendingImport: [],
   pendingCancelled: [],
   editIdx: null,
@@ -39,7 +39,7 @@ function load(){
       if(!Array.isArray(S.journal))S.journal=[];
       if(!Array.isArray(S.ampStatements))S.ampStatements=[];
       if(!Array.isArray(S.importLog))S.importLog=[];
-      if(!S.feeRates)S.feeRates={MNQ:0.90,MES:0.90,NQ:2.25,ES:2.25};
+      if(!S.feeRates)S.feeRates={ MNQ:0.90, MES:0.90, NQ:2.25, ES:2.25, YM:2.25, MYM:0.90, RTY:2.25, M2K:0.90, CL:2.25, MCL:0.90, GC:2.25, MGC:0.90, SI:2.25, SIL:0.90, NG:2.25, HG:2.25, ZB:1.52, ZN:1.52, ZC:2.25, ZS:2.25, ZW:2.25 };
       // Restore V2 data: key levels, trading rules, violations
       if(!S.keyLevels)S.keyLevels=null;
       if(!S.rules)S.rules={maxTradesPerDay:3,maxContractsPerTrade:1,maxDailyLoss:50,alarmEnabled:true};

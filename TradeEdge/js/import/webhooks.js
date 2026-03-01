@@ -108,6 +108,47 @@ function webhookProcessTrades(raw) {
 
     var type = (t.type || 'trade').toLowerCase();
 
+    // SL/TP update — patch existing open trade, don't create new one
+    if (type === 'update' || type === 'bracket' || type === 'order_modified') {
+      for (var i = S.trades.length - 1; i >= 0; i--) {
+        var ut = S.trades[i];
+        if (ut.source === 'Webhook' && ut.symbol === sym && !ut.exit) {
+          var tv = getTickValue(sym);
+          var isLong = ut.side === 'Long';
+          // Patch SL and recompute dollar value
+          if (t.sl != null) {
+            ut.sl = _parsePrice(t.sl);
+            ut.slDollar = isLong
+              ? (ut.sl - ut.entry) * tv * (ut.qty || 1)
+              : (ut.entry - ut.sl) * tv * (ut.qty || 1);
+            if (!ut.slHistory) ut.slHistory = [];
+            ut.slHistory.push({ price: ut.sl, dollar: ut.slDollar, time: new Date().toISOString(), source: 'webhook-update' });
+          }
+          // Patch TP and recompute dollar value
+          if (t.tp != null) {
+            ut.tp = _parsePrice(t.tp);
+            ut.tpDollar = Math.abs(isLong
+              ? (ut.tp - ut.entry) * tv * (ut.qty || 1)
+              : (ut.entry - ut.tp) * tv * (ut.qty || 1));
+            if (!ut.tpHistory) ut.tpHistory = [];
+            ut.tpHistory.push({ price: ut.tp, dollar: ut.tpDollar, time: new Date().toISOString(), source: 'webhook-update' });
+          }
+          // Recalculate R:R from dollar values or prices
+          if (ut.slDollar && ut.tpDollar) {
+            ut.rr = Math.abs(ut.tpDollar / Math.abs(ut.slDollar));
+          } else if (ut.entry && ut.sl && ut.tp) {
+            var risk = Math.abs(ut.entry - ut.sl);
+            var reward = Math.abs(ut.tp - ut.entry);
+            ut.rr = risk > 0 ? reward / risk : null;
+          }
+          break;
+        }
+      }
+      seenIds.push(t.id);
+      skipped++;
+      return;
+    }
+
     if (type === 'exit') {
       // Find matching open trade (same symbol, source=webhook, no exit price)
       var matched = false;
@@ -118,8 +159,23 @@ function webhookProcessTrades(raw) {
           et.pnl = parseFloat(t.pnl) || 0;
           et.fees = parseFloat(t.fees) || feeForSymbol(sym) * (et.qty || 1) * 2;
           et.netPnl = et.pnl - et.fees;
-          et.exitReason = t.exitReason || '';
           et.webhookExitId = t.id;
+          // Compute actualR from realized P&L vs initial risk
+          if (et.slDollar) {
+            et.actualR = Math.abs((et.pnl || 0) / Math.abs(et.slDollar)) * (et.pnl >= 0 ? 1 : -1);
+          }
+          // Derive exitReason from exit price proximity to SL vs TP
+          if (t.exitReason) {
+            et.exitReason = t.exitReason;
+          } else if (et.exit && et.sl && et.tp) {
+            var slDist = Math.abs(et.exit - et.sl);
+            var tpDist = Math.abs(et.exit - et.tp);
+            if (slDist < tpDist) et.exitReason = 'SL Hit';
+            else if (tpDist < slDist) et.exitReason = 'TP Hit';
+            else et.exitReason = 'Manual Exit';
+          } else {
+            et.exitReason = t.exitReason || '';
+          }
           matched = true;
           added++;
           break;
@@ -129,7 +185,7 @@ function webhookProcessTrades(raw) {
         S.trades.push(webhookMapTrade(t));
         added++;
       }
-    } else if (type === 'entry') {
+    } else if (type === 'entry' || type === 'order_placed') {
       S.trades.push(webhookMapTrade(t));
       added++;
     } else {
@@ -158,11 +214,28 @@ function webhookMapTrade(raw) {
   var fees = parseFloat(raw.fees) || feeForSymbol(sym) * qty * 2;
   var dt = pdt(raw.receivedAt || new Date().toISOString());
 
+  var tv = getTickValue(sym);
+  var isLong = side === 'Long';
+
   var rr = null;
   if (entry && sl && tp) {
     var risk = Math.abs(entry - sl);
     var reward = Math.abs(tp - entry);
     if (risk > 0) rr = reward / risk;
+  }
+
+  // Compute dollar-value SL/TP for dashboard metrics
+  var slDollar = null;
+  var tpDollar = null;
+  if (entry && sl) {
+    slDollar = isLong
+      ? (sl - entry) * tv * qty    // negative for longs (SL below entry)
+      : (entry - sl) * tv * qty;   // negative for shorts (SL above entry)
+  }
+  if (entry && tp) {
+    tpDollar = Math.abs(isLong
+      ? (tp - entry) * tv * qty
+      : (entry - tp) * tv * qty);
   }
 
   return {
@@ -179,6 +252,14 @@ function webhookMapTrade(raw) {
     fees: fees,
     netPnl: pnl - fees,
     rr: rr,
+    slDollar: slDollar,
+    tpDollar: tpDollar,
+    slHistory: sl ? [{ price: sl, dollar: slDollar, time: dt.time, source: 'webhook' }] : [],
+    tpHistory: tp ? [{ price: tp, dollar: tpDollar, time: dt.time, source: 'webhook' }] : [],
+    actualR: null,
+    exitReason: '',
+    orderType: raw.orderType || '',
+    orderId: raw.orderId || '',
     killzone: dkz(dt.time),
     tags: [],
     checklist: {},
@@ -190,6 +271,7 @@ function webhookMapTrade(raw) {
     chartUrl: '',
     chartImg: null,
     importedAt: new Date().toISOString(),
+    account: raw.account || '',
     source: 'Webhook',
     webhookId: raw.id || '',
   };
