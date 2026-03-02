@@ -25,7 +25,7 @@ app = Flask(__name__)
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 TRADES_FILE = os.path.join(DATA_DIR, "webhook-trades.json")
 SUMMARY_FILE = os.path.join(DATA_DIR, "webhook-summary.json")
-PASSPHRASE = os.environ.get("WEBHOOK_PASSPHRASE", "slickrick_tradeedge")
+PASSPHRASE = os.environ.get("WEBHOOK_PASSPHRASE", "")
 
 
 # ── Helpers ──────────────────────────────────────────────────

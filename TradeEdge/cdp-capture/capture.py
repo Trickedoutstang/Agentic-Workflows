@@ -102,7 +102,7 @@ def load_config():
     config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
     defaults = {
         "webhookUrl": "http://localhost:5050",
-        "passphrase": "slickrick_tradeedge",
+        "passphrase": os.environ.get("WEBHOOK_PASSPHRASE", ""),
         "activeAccount": "amp_live",
         "accounts": [
             {"name": "amp_live", "label": "AMP Live"},
@@ -526,7 +526,7 @@ class CDPCapture:
         self.port = args.port or config.get("cdpPort", 9222)
         self.account = args.account or config.get("activeAccount", "amp_live")
         self.webhook_url = config.get("webhookUrl", "http://localhost:5050")
-        self.passphrase = config.get("passphrase", "slickrick_tradeedge")
+        self.passphrase = os.environ.get("WEBHOOK_PASSPHRASE") or config.get("passphrase", "")
         self.dedup = EventDedup()
         self.discovery_log = []
         self.stats = {"captured": 0, "sent": 0, "errors": 0}

@@ -7,8 +7,14 @@
 #   bash start-capture.sh --mode discovery    # log WS traffic
 #   CDP_PORT=9333 bash start-capture.sh       # custom port
 
-CDP_PORT=${CDP_PORT:-9222}
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# Load environment variables from parent .env if present
+if [ -f "$SCRIPT_DIR/../.env" ]; then
+  set -a; source "$SCRIPT_DIR/../.env"; set +a
+fi
+
+CDP_PORT=${CDP_PORT:-9222}
 TV_APP="/Applications/TradingView.app/Contents/MacOS/TradingView"
 
 echo ""

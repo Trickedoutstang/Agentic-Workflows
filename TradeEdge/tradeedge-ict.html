@@ -1141,7 +1141,7 @@ kbd{background:var(--s3);border:1px solid var(--b3);border-radius:4px;padding:2p
         <div class="cc" style="grid-column:1/-1">
           <div class="cc-title">DATA MANAGEMENT</div>
           <div style="display:flex;gap:10px;flex-wrap:wrap">
-            <button class="btn btn-ghost btn-sm" onclick="exportAllCSV()">Export All Data (CSV)</button>
+            <button class="btn btn-ghost btn-sm" onclick="exportCSV()">Export All Data (CSV)</button>
             <button class="btn btn-ghost btn-sm" onclick="exportJSON()">Backup (JSON)</button>
             <button class="btn btn-ghost btn-sm" onclick="importJSON()">Restore from Backup</button>
             <button class="btn btn-red btn-sm" onclick="clearAll(event)">Clear All Data</button>
@@ -2961,55 +2961,6 @@ let pendingTrades=[];
 let importMode='';
 let lastImportFileName='';
 
-function importHistory(e){
-  const file=e.target.files[0];if(!file)return;
-  lastImportFileName=file.name;
-  // Reset file input so same file can be re-imported
-  if(e.target.value) e.target.value='';
-  const reader=new FileReader();
-  reader.onload=ev=>{
-    const text=ev.target.result;
-    const rows=parseCSV(text);
-    if(!rows.length){toast('Could not parse CSV — check format','err');return;}
-    pendingRows=rows;
-    const headers=Object.keys(rows[0]);
-    const hl=headers.map(h=>h.toLowerCase());
-    console.log('[TradeEdge] CSV Headers:', headers);
-    console.log('[TradeEdge] First row:', JSON.stringify(rows[0]));
-
-    // Detect format by checking which columns exist
-    const hasFillPrice=hl.some(h=>h.includes('fill price'));
-    const hasPnL=hl.some(h=>h.match(/p[&\/]?l|profit|result/i));
-    const hasEntryExit=hl.some(h=>h.includes('entry'));
-    const hasClosingTime=hl.some(h=>h.includes('closing time')||h.includes('status time'));
-
-    if(hasEntryExit){
-      importMode='account_history';
-      pendingTrades=rows.map(r=>mapRow(r)).filter(Boolean);
-    } else if(hasFillPrice||hasClosingTime){
-      importMode='history_fills';
-      pendingTrades=pairFills(rows);
-    } else if(hasPnL){
-      importMode='generic_pnl';
-      pendingTrades=rows.map(r=>mapRow(r)).filter(Boolean);
-    } else {
-      importMode='generic';
-      pendingTrades=rows.map(r=>mapRow(r)).filter(Boolean);
-    }
-
-    console.log('[TradeEdge] Mode:', importMode, '| Trades:', pendingTrades.length);
-    if(pendingTrades.length) console.log('[TradeEdge] Sample:', JSON.stringify(pendingTrades[0]));
-
-    showPreview(rows);
-    showTradePreview(pendingTrades);
-    document.getElementById('ic-history-status').textContent=`✓ ${rows.length} rows → ${pendingTrades.length} trades`;
-    document.getElementById('ic-history-status').style.color='var(--green)';
-    document.getElementById('ic-history').classList.add('has-data');
-    toast(`${pendingTrades.length} trades parsed`,'ok');
-  };
-  reader.readAsText(file);
-}
-
 // Robust CSV parser — handles quotes, commas inside quotes, tabs
 function parseCSV(text){
   const lines=text.trim().split(/\r?\n/);
@@ -3500,40 +3451,6 @@ function _recomputeStartingBalance(){
   }
 }
 
-function confirmImport(){
-  if(!pendingTrades.length){toast('No trades to import — upload a CSV first','err');return;}
-  let added=0,skipped=0;
-  pendingTrades.forEach(t=>{
-    if(!t)return;
-    const k=`${t.date}|${t.time}|${t.symbol}|${t.side}|${t.entry||''}|${t.pnl||''}`;
-    if(S.trades.some(e=>`${e.date}|${e.time}|${e.symbol}|${e.side}|${e.entry||''}|${e.pnl||''}`===k)){skipped++;return;}
-    S.trades.push(t);added++;
-  });
-  console.log('[TradeEdge] Import confirmed:', added, 'added,', skipped, 'skipped. Total trades:', S.trades.length);
-  if(S.trades.length) console.log('[TradeEdge] Last trade:', JSON.stringify(S.trades[S.trades.length-1]));
-  if(!S.importLog) S.importLog=[];
-  S.importLog.push({type:'CSV',mode:importMode,fileName:lastImportFileName||'Unknown',tradesAdded:added,tradesSkipped:skipped,date:new Date().toISOString()});
-  // Reconstruct SL/TP from cancelled orders if available
-  if(S.pendingCancelled&&S.pendingCancelled.length){
-    reconstructSLTP();
-  }
-  // Recompute starting balance now that trades exist — works even if PDF was imported first
-  _recomputeStartingBalance();
-  save();
-  // Change 24: Check trading rules for each imported trade
-  var allViolations=[];
-  pendingTrades.forEach(function(t){if(t){var v=_checkTradeRules(t);if(v.length)allViolations=allViolations.concat(v);}});
-  pendingRows=[];pendingTrades=[];
-  document.getElementById('import-preview').style.display='none';
-  const tp=document.getElementById('trade-preview');if(tp)tp.remove();
-  toast(`✓ Imported ${added} trades (${skipped} duplicates skipped)`,'ok');
-  if(typeof renderImportLog==='function')renderImportLog();
-  updateSidebar();
-  go('dashboard');
-  // Trigger alarm if violations found (after navigation so user sees it)
-  if(allViolations.length)setTimeout(function(){triggerNuclearAlarm(allViolations);},500);
-}
-
 // ══════════════════════════════════════════════════════════
 // PDF TEXT EXTRACTION (using pdf.js)
 // ══════════════════════════════════════════════════════════
@@ -3875,23 +3792,6 @@ function renderImportLog(){
     </tbody></table></div>`;
 }
 
-// Cancelled CSV for SL/TP
-function importCancelled(e){
-  const file=e.target.files[0];if(!file)return;
-  const reader=new FileReader();
-  reader.onload=ev=>{
-    const rows=parseCSV(ev.target.result);
-    S.pendingCancelled=rows;
-    document.getElementById('ic-cancelled-status').textContent=`✓ ${rows.length} cancelled orders`;
-    document.getElementById('ic-cancelled-status').style.color='var(--green)';
-    document.getElementById('ic-cancelled').classList.add('has-data');
-    if(!S.importLog)S.importLog=[];
-    S.importLog.push({type:'Cancelled CSV',fileName:file.name,ordersLoaded:rows.length,date:new Date().toISOString()});
-    save();if(typeof renderImportLog==='function')renderImportLog();
-    toast(`${rows.length} cancelled orders loaded`,'ok');
-  };reader.readAsText(file);
-}
-
 // Drag & drop
 function doDrag(e){e.preventDefault();document.getElementById('drop-zone').classList.add('drag');}
 function doDragLeave(){document.getElementById('drop-zone').classList.remove('drag');}
@@ -4123,7 +4023,7 @@ function exportCSV(){
   const csv=[keys.join(','),...S.trades.map(t=>keys.map(k=>JSON.stringify(t[k]??'')).join(','))].join('\n');
   dl(csv,'tradeedge-trades.csv','text/csv');
 }
-function exportAllCSV(){exportCSV();}
+
 function exportJSON(){
   dl(JSON.stringify({trades:S.trades,journal:S.journal,feeRates:S.feeRates,ampStatements:S.ampStatements||[],importLog:S.importLog||[]},null,2),'tradeedge-backup.json','application/json');
 }
@@ -4829,11 +4729,6 @@ _preloadAIPaddImgs();
 // 3D TRADING DESK SCENE — THREE.JS
 // ══════════════════════════════════════════════════════════
 
-// Compact noise utilities for realistic rendering (V2.2)
-function _hash(x,y){var n=x*374761393+y*668265263;n=(n^(n>>13))*1274126177;return(n^(n>>16))&0x7fffffff;}
-function _noise2d(x,y){var ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy;fx=fx*fx*(3-2*fx);fy=fy*fy*(3-2*fy);var a=_hash(ix,iy)/0x7fffffff,b=_hash(ix+1,iy)/0x7fffffff,c=_hash(ix,iy+1)/0x7fffffff,d=_hash(ix+1,iy+1)/0x7fffffff;return a+(b-a)*fx+(c-a)*fy+(d-c-b+a)*fx*fy;}
-function _fbm(x,y,oct){var v=0,a=0.5,f=1;for(var i=0;i<oct;i++){v+=a*_noise2d(x*f,y*f);f*=2;a*=0.5;}return v;}
-
 // V2.3: Star Trek Bridge — Command Console + Bridge Deck
 function _createConsole(scene){
   var _DS=window.innerWidth<600?2:4;var conC=document.createElement('canvas');conC.width=1024*_DS;conC.height=1024*_DS;
@@ -5377,136 +5272,6 @@ function _fetchEconomicCalendar(){
   tryFetch(0);
 }
 
-// Change 16+18: 3D Wall Calendar object with trade P&L coloring + news dots
-function _createWallCalendar(scene){
-  var calGroup=new THREE.Group();
-  // Frame
-  var frameGeo=new THREE.BoxGeometry(2.0,2.2,0.04);
-  var frameMat=new THREE.MeshStandardMaterial({color:0x1a1208,roughness:0.7,metalness:0.1});
-  var frame=new THREE.Mesh(frameGeo,frameMat);frame.castShadow=true;
-  calGroup.add(frame);
-  // Calendar face canvas
-  var calC=document.createElement('canvas');calC.width=512;calC.height=576;
-  _3d._calCanvas=calC;_3d._calCtx=calC.getContext('2d');
-  _drawWallCalendar();
-  var calTex=new THREE.CanvasTexture(calC);
-  _3d._calTex=calTex;
-  var faceGeo=new THREE.PlaneGeometry(1.9,2.1);
-  var faceMat=new THREE.MeshStandardMaterial({map:calTex,emissive:0x060a08,emissiveIntensity:0.08,roughness:0.9});
-  var face=new THREE.Mesh(faceGeo,faceMat);face.position.z=0.021;
-  calGroup.add(face);
-  calGroup.position.set(0,3.5,-3.8);
-  calGroup.userData={type:'calendar'};
-  scene.add(calGroup);
-  _3d._calendar=calGroup;
-}
-
-function _drawWallCalendar(){
-  if(!_3d||!_3d._calCanvas)return;
-  var c=_3d._calCanvas,ctx=_3d._calCtx;
-  var cw=512,ch=576;
-  // Background
-  ctx.fillStyle='#0a0e0c';ctx.fillRect(0,0,cw,ch);
-  // Title: month + year
-  var now=new Date();
-  var months=['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
-  ctx.fillStyle='#e8edf8';ctx.font='bold 24px monospace';ctx.textAlign='center';
-  ctx.fillText(months[now.getMonth()]+' '+now.getFullYear(),cw/2,32);
-  // Day headers
-  var days=['SUN','MON','TUE','WED','THU','FRI','SAT'];
-  var cellW=cw/7,cellH=60,startY=50;
-  ctx.font='bold 11px monospace';ctx.fillStyle='#4d6890';
-  days.forEach(function(d,i){ctx.fillText(d,i*cellW+cellW/2,startY);});
-  // Build day grid
-  var firstDay=new Date(now.getFullYear(),now.getMonth(),1).getDay();
-  var daysInMonth=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
-  var today=now.getDate();
-  // Build trade P&L map for this month
-  var tradeDayMap={};
-  if(S&&S.trades){
-    S.trades.forEach(function(t){
-      var d=t.date;if(!d)return;
-      var parts=d.split('-');if(parts.length<3)return;
-      var tMonth=parseInt(parts[1],10)-1,tYear=parseInt(parts[0],10),tDay=parseInt(parts[2],10);
-      if(tMonth===now.getMonth()&&tYear===now.getFullYear()){
-        if(!tradeDayMap[tDay])tradeDayMap[tDay]=0;
-        tradeDayMap[tDay]+=(t.netPnl||t.pnl||0);
-      }
-    });
-  }
-  // Build news event day map
-  var newsDayMap={};
-  if(S&&S._econEvents){
-    S._econEvents.forEach(function(ev){
-      if(!ev.date)return;
-      var parts=ev.date.split('-');if(parts.length<3)return;
-      var eMonth=parseInt(parts[1],10)-1,eYear=parseInt(parts[0],10),eDay=parseInt(parts[2],10);
-      if(eMonth===now.getMonth()&&eYear===now.getFullYear()){
-        if(!newsDayMap[eDay])newsDayMap[eDay]=[];
-        newsDayMap[eDay].push(ev);
-      }
-    });
-  }
-  // Draw day cells
-  ctx.font='14px monospace';ctx.textAlign='center';
-  var row=0;
-  for(var d=1;d<=daysInMonth;d++){
-    var col=(firstDay+d-1)%7;
-    if(d>1&&col===0)row++;
-    var cx2=col*cellW+cellW/2,cy2=startY+16+row*cellH+cellH/2;
-    // Cell background
-    var pnl=tradeDayMap[d];
-    if(pnl!==undefined){
-      ctx.fillStyle=pnl>0?'rgba(0,229,160,0.15)':pnl<0?'rgba(255,61,90,0.15)':'rgba(255,255,255,0.05)';
-      ctx.fillRect(col*cellW+2,startY+16+row*cellH+4,cellW-4,cellH-8);
-    }
-    // Today highlight
-    if(d===today){
-      ctx.strokeStyle='#00f0c0';ctx.lineWidth=1.5;
-      ctx.strokeRect(col*cellW+2,startY+16+row*cellH+4,cellW-4,cellH-8);
-    }
-    // Day number
-    ctx.fillStyle=d===today?'#00f0c0':pnl!==undefined?(pnl>0?'#00e5a0':'#ff3d5a'):'#7b8db0';
-    ctx.fillText(''+d,cx2,cy2-6);
-    // P&L amount
-    if(pnl!==undefined){
-      ctx.font='9px monospace';
-      ctx.fillStyle=pnl>0?'#00e5a080':'#ff3d5a80';
-      ctx.fillText((pnl>0?'+':'')+pnl.toFixed(0),cx2,cy2+10);
-      ctx.font='14px monospace';
-    }
-    // Red news dot
-    if(newsDayMap[d]){
-      ctx.fillStyle='#ff3d5a';
-      ctx.beginPath();ctx.arc(col*cellW+cellW-8,startY+16+row*cellH+10,4,0,Math.PI*2);ctx.fill();
-      ctx.font='7px monospace';ctx.fillStyle='#ff3d5a';
-      ctx.fillText(''+newsDayMap[d].length,col*cellW+cellW-8,startY+16+row*cellH+22);
-      ctx.font='14px monospace';
-    }
-  }
-  // Change 18: Today's news section at bottom
-  var newsY=startY+16+(row+1)*cellH+20;
-  ctx.fillStyle='#4d6890';ctx.font='bold 11px monospace';ctx.textAlign='center';
-  var todayStr=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
-  var todayNews=[];
-  if(S&&S._econEvents){
-    S._econEvents.forEach(function(ev){if(ev.date===todayStr)todayNews.push(ev);});
-  }
-  if(todayNews.length>0){
-    ctx.fillText('\u2501\u2501 TODAY\'S NEWS \u2501\u2501',cw/2,newsY);
-    ctx.textAlign='left';ctx.font='10px monospace';
-    todayNews.forEach(function(ev,i){
-      if(i>3)return; // Max 4 events displayed
-      ctx.fillStyle='#ff3d5a';ctx.fillText('\ud83d\udd34 '+ev.time+'  '+ev.event.substring(0,30),20,newsY+16+i*14);
-    });
-  }else{
-    ctx.fillStyle='#4d689060';
-    ctx.fillText('No high-impact USD news today',cw/2,newsY);
-  }
-  // Mark texture for update
-  if(_3d._calTex)_3d._calTex.needsUpdate=true;
-}
-
 // Change 19: Upcoming news alert HUD + checker
 function _checkNewsAlerts(){
   var hud=document.getElementById('news-alert-hud');
@@ -5861,29 +5626,6 @@ function _playNuclearSiren(){
     osc.connect(gain);gain.connect(ctx.destination);
     osc.start();osc.stop(ctx.currentTime+4.5);
   }catch(e){console.warn('[TradeEdge] Nuclear siren audio failed:',e);}
-}
-
-// Change 14: Clean disposal of desk scene objects on re-init
-function _disposeSceneObjects(){
-  if(typeof _3d==='undefined'||!_3d.scene)return;
-  var toRemove=[];
-  _3d.scene.traverse(function(obj){
-    if(obj===_3d.chipGroup)return; // Keep chip group
-    if(obj.userData&&(obj.userData.type==='monitor'||obj.userData.type==='journal'||obj.userData.type==='notebook'||obj.userData.type==='phone'||obj.userData.type==='calendar'||obj.userData.type==='moon'||obj.userData.type==='viewscreen'))toRemove.push(obj);
-  });
-  toRemove.forEach(function(obj){
-    obj.traverse(function(child){
-      if(child.geometry)child.geometry.dispose();
-      if(child.material){
-        if(child.material.map)child.material.map.dispose();
-        if(child.material.bumpMap)child.material.bumpMap.dispose();
-        child.material.dispose();
-      }
-    });
-    if(obj.parent)obj.parent.remove(obj);
-  });
-  _monCanvases=[];_monTextures=[];
-  _3d._monitors=[];_3d._journal=null;_3d._moon=null;_3d._space=null;
 }
 
 // ══════════════════════════════════════════════════════════
@@ -6834,8 +6576,6 @@ function init3DChips(){
 
 // ─── V12 CHIP SYSTEM: Individual chip meshes per stack → realistic imperfections ───
 
-// Helper: adjust RGB array by offset, return css rgb() string
-function _ac(r,a){return 'rgb('+Math.max(0,Math.min(255,r[0]+a))+','+Math.max(0,Math.min(255,r[1]+a))+','+Math.max(0,Math.min(255,r[2]+a))+')';}
 
 // Texture cache (top/bottom cached per denom; side created fresh per stack)
 var _chipTexCache={};
@@ -7275,69 +7015,6 @@ function _playChipSlamSound(idx,total){
   }catch(e){console.warn('[TradeEdge] Slam audio error:',e);}
 }
 
-// V3.0: Holographic disc drop cascade — rising chirps + bass hum crescendo
-function _playChipDropSound(count){
-  try{
-    var ctx=new(window.AudioContext||window.webkitAudioContext)();
-    var n=Math.min(count||8,25);
-
-    var comp=ctx.createDynamicsCompressor();
-    comp.threshold.value=-18;comp.knee.value=12;comp.ratio.value=4;
-    comp.attack.value=0.002;comp.release.value=0.05;
-    comp.connect(ctx.destination);
-
-    var dryGain=ctx.createGain();dryGain.gain.value=0.8;dryGain.connect(comp);
-
-    for(var i=0;i<n;i++){(function(idx){
-      var t=idx<5?idx*0.03:0.15+(idx-5)*0.05+(Math.random()*0.01);
-      var pv=0.9+Math.random()*0.2;
-
-      // Rising sine chirp per disc
-      var chirp=ctx.createOscillator(),cg=ctx.createGain();
-      chirp.type='sine';
-      chirp.frequency.setValueAtTime(1400*pv,ctx.currentTime+t);
-      chirp.frequency.exponentialRampToValueAtTime(2600*pv,ctx.currentTime+t+0.06);
-      cg.gain.setValueAtTime(0.05,ctx.currentTime+t);
-      cg.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+t+0.08);
-      chirp.connect(cg);cg.connect(dryGain);
-      chirp.start(ctx.currentTime+t);chirp.stop(ctx.currentTime+t+0.1);
-
-      // Sub bass hum per disc
-      var bass=ctx.createOscillator(),bg=ctx.createGain();
-      bass.type='sine';
-      bass.frequency.setValueAtTime(100*pv,ctx.currentTime+t);
-      bass.frequency.exponentialRampToValueAtTime(60,ctx.currentTime+t+0.08);
-      bg.gain.setValueAtTime(0.03,ctx.currentTime+t);
-      bg.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+t+0.1);
-      bass.connect(bg);bg.connect(dryGain);
-      bass.start(ctx.currentTime+t);bass.stop(ctx.currentTime+t+0.12);
-
-      // Every 3rd disc: digital glitch blip
-      if(idx%3===2){
-        var glitch=ctx.createOscillator(),gg=ctx.createGain();
-        glitch.type='square';
-        glitch.frequency.setValueAtTime(3200*pv,ctx.currentTime+t+0.01);
-        glitch.frequency.exponentialRampToValueAtTime(1600,ctx.currentTime+t+0.03);
-        gg.gain.setValueAtTime(0.015,ctx.currentTime+t+0.01);
-        gg.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+t+0.04);
-        glitch.connect(gg);gg.connect(dryGain);
-        glitch.start(ctx.currentTime+t+0.01);glitch.stop(ctx.currentTime+t+0.05);
-      }
-    })(i);}
-
-    // Settle: deep hum resolution
-    var st=n<5?n*0.03+0.04:0.15+(n-5)*0.05+0.06;
-    var resolve=ctx.createOscillator(),rg=ctx.createGain();
-    resolve.type='sine';
-    resolve.frequency.setValueAtTime(60,ctx.currentTime+st);
-    resolve.frequency.exponentialRampToValueAtTime(30,ctx.currentTime+st+0.3);
-    rg.gain.setValueAtTime(0.04,ctx.currentTime+st);
-    rg.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+st+0.35);
-    resolve.connect(rg);rg.connect(dryGain);
-    resolve.start(ctx.currentTime+st);resolve.stop(ctx.currentTime+st+0.4);
-  }catch(e){console.warn('[TradeEdge] Audio error:',e);}
-}
-
 // _lastChipBalance and _nukeTriggered declared early at ~line 1407
 var _chipInitRetries=0;
 var _userHasInteracted=false;
@@ -7384,19 +7061,6 @@ function _playUINav(){
     o.connect(g);g.connect(ctx.destination);
     o.start();o.stop(ctx.currentTime+0.1);
     setTimeout(function(){ctx.close();},200);
-  }catch(e){}
-}
-function _playUIToggle(){
-  if(!_userHasInteracted)return;
-  try{
-    var ctx=new(window.AudioContext||window.webkitAudioContext)();
-    var o=ctx.createOscillator(),g=ctx.createGain();
-    o.type='sine';o.frequency.value=600;
-    g.gain.setValueAtTime(0.04,ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.04);
-    o.connect(g);g.connect(ctx.destination);
-    o.start();o.stop(ctx.currentTime+0.04);
-    setTimeout(function(){ctx.close();},100);
   }catch(e){}
 }
 function _playLaserFire(){

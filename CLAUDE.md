@@ -1,3 +1,7 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # SlickRick's Agentic Workspace
 
 ## Who I Am
@@ -61,6 +65,32 @@ Then use `/rc` to connect from your phone.
 
 Reference: [Claude Code Agent Teams Docs](https://code.claude.com/docs/en/agent-teams)
 Reference: [IndyDevDan multi-agent observability](https://github.com/disler/claude-code-hooks-multi-agent-observability)
+
+## Data Flow Between Projects
+```
+Research/ (ICT video analysis)
+    ↓ structured strategy notes
+TradingBot/ (automated trading)
+    ↓ executes trades via AMP Futures
+TradeEdge/ (journal + dashboard)
+    ↑ imports trades via CSV/PDF or TradingView webhooks
+```
+- Research outputs feed TradingBot strategy logic
+- TradingBot and manual trades both flow into TradeEdge for journaling
+- See `TradeEdge/WEBHOOK-PLAN.md` for the TradingView → TradeEdge live pipeline
+
+## Environment
+- **Node.js:** installed globally (required for Claude Code CLI)
+- **Python 3:** available as `python3` (required for webhook server, whisper, future bot)
+- **TradeEdge:** Main monolith is `tradeedge-ict.html` (~8,100 lines). A modular split (`index.html` + `js/` + `css/`) also exists but the monolith is the active dev file. Edit and refresh in browser.
+- **ngrok:** for TradingView webhook tunneling (install via `brew install ngrok`)
+
+## Installed Tooling (`.claude/` directory)
+- **14 agents** — planner, architect, tdd-guide, code-reviewer, security-reviewer, build-error-resolver, e2e-runner, refactor-cleaner, doc-updater, go-reviewer, go-build-resolver, python-reviewer, database-reviewer, chief-of-staff
+- **33 commands** — including /multi-plan, /multi-execute, /orchestrate, /tdd, /code-review
+- **50 skills** — backend-patterns, frontend-patterns, security-review, python-patterns, tdd-workflow, etc.
+- **Global rules** — `~/.claude/rules/` (common, typescript, python)
+- Source: [everything-claude-code](https://github.com/affaan-m/everything-claude-code)
 
 ## API Budget Guidelines
 - Total: $100/month (Max plan)

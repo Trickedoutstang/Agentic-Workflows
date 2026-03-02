@@ -5,6 +5,12 @@
 
 set -e
 
+# Load environment variables from .env if present
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "$SCRIPT_DIR/.env" ]; then
+  set -a; source "$SCRIPT_DIR/.env"; set +a
+fi
+
 PORT=${PORT:-5050}
 FLASK_PID=""
 

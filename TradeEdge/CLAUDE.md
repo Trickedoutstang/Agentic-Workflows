@@ -5,7 +5,7 @@ Personal trading journal and live account dashboard for AMP Futures day traders.
 Single-file vanilla JS app. No build system. Edit directly.
 
 ## Main File
-`tradeedge-ict.html` (~7,800 lines) — in this folder
+`tradeedge-ict.html` (~8,100 lines) — in this folder. A modular split (`index.html` + `js/` + `css/`) also exists but this monolith is the active dev file.
 
 Open this file to make changes. Refresh in browser to test.
 
@@ -45,7 +45,7 @@ Open this file to make changes. Refresh in browser to test.
 | `renderChips(balance)` | 3D poker chip visualization (Three.js or CSS fallback) |
 | `parseAMPStatement(text)` | Parses AMP Futures PDF statement |
 | `importPDFs(e)` | Handles PDF file imports |
-| `confirmImport()` | Confirms pending CSV trade import |
+| `processRouted()` | Auto-confirms CSV/PDF import (replaces old confirmImport) |
 
 ## ICT Concepts Used
 - **Killzones:** London (2-5am ET), NY AM (7-10am ET), NY PM (1:30-4pm ET)
@@ -72,7 +72,7 @@ Open this file to make changes. Refresh in browser to test.
 - `_recomputeStartingBalance()` must be called after both CSV and PDF imports, and on page load
 
 ## AI Textures (V3.0)
-- Generated via **Google Gemini** (Nano Banana / `gemini-2.0-flash-exp`)
+- Generated via **Google Gemini** (Nano Banana Pro / `gemini-3-pro-image-preview`)
 - 10 textures: console, floor, hull wall, ceiling, 3 viewscreen modes, PADD, datapad, skybox
 - Prompts defined in `generate-textures.js` TEXTURES array
 - To regenerate:

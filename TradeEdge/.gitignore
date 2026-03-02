@@ -1,3 +1,5 @@
 .env
 node_modules/
 textures/
+cdp-capture/cdp-discovery.json
+cdp-capture/pending-fills.json

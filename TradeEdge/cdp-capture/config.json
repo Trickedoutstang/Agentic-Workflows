@@ -1,6 +1,6 @@
 {
   "webhookUrl": "http://localhost:5050",
-  "passphrase": "slickrick_tradeedge",
+  "passphrase": "",
   "activeAccount": "amp_live",
   "accounts": [
     { "name": "amp_live", "label": "AMP Live" },
