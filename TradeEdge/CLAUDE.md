@@ -66,10 +66,34 @@ Open this file to make changes. Refresh in browser to test.
 | ES | 0.25 | $12.50 |
 | MES | 0.25 | $1.25 |
 
+## Code Review (March 2, 2026)
+**Full report:** `CODE-REVIEW.md` in this folder — read it before making changes.
+
+39 findings across security, logic, and performance. Key priorities:
+1. **The `||` falsy-zero sweep** — `0` treated as falsy corrupts P&L, fees, balance display (6 bugs). Create canonical `tradeNet(t)` function and replace all `t.netPnl||t.pnl||0` patterns.
+2. **Partial fills bug** in `pairFills` — remainder contracts silently dropped when qty mismatches.
+3. **Performance trio** — defer CDN scripts, externalize base64 textures, pause 3D animation when not on dashboard.
+4. **Security hardening** — add SRI to CDN scripts, `safeHref()` for chartUrl, `escapeHtml()` on remaining innerHTML spots.
+
 ## Known Issues / Watch For
+- **SYSTEMIC: `x||0` treats zero as falsy** — use `x!=null?x:0` or `x??0` for numeric fields. Affects `np()`, `gn()`, `updateSidebar`, `_recomputeStartingBalance`, donut/DOW charts, save().
 - `parseFloat(x) || null` pattern is WRONG for zero prices — use `isNaN()` check instead (already fixed in saveTrade)
 - PDF trades are "Long" synthetic records — CSV trades are actual side — never mix them
 - `_recomputeStartingBalance()` must be called after both CSV and PDF imports, and on page load
+- `pendingCancelled` is NOT saved to localStorage — SL/TP data lost on reload
+- Calendar dates need `+'T12:00:00'` suffix to avoid UTC off-by-one (line 2077)
+
+## Available Tooling
+Installed via everything-claude-code (March 2, 2026):
+- **14 agents** — planner, architect, tdd-guide, code-reviewer, security-reviewer, build-error-resolver, e2e-runner, refactor-cleaner, doc-updater, go-reviewer, go-build-resolver, python-reviewer, database-reviewer
+- **56 skills** — including frontend-patterns, security-review, market-research
+- **35 commands** — including /multi-plan, /multi-execute
+- **Hooks** — console.log warning, strategic compact reminder
+- **Contexts** — `/context dev` (code-first), `/context review` (critique mode), `/context research` (explore only)
+- **Agent teams enabled** — `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in settings
+
+## Future: TradingView Webhook Pipeline
+See `WEBHOOK-PLAN.md` in this folder — complete plan for TradingView → ngrok → Flask → TradeEdge auto-import.
 
 ## AI Textures (V3.0)
 - Generated via **Google Gemini** (Nano Banana Pro / `gemini-3-pro-image-preview`)
